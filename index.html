@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
+    <title>PM Tính Học Phí - ver 2.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+
+        * { -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            overscroll-behavior: none;
+        }
+
+        body {
+            background: #dbe3ee;
+        }
+
+        /* ================= APP SHELL (khung ứng dụng di động) ================= */
+        .app-shell {
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100dvh;
+            background: #f6f7fb;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 2px rgba(0,0,0,0.06), 0 25px 60px -15px rgba(15, 23, 42, 0.35);
+        }
+
+        @media (min-width: 481px) {
+            body { display: flex; align-items: center; justify-content: center; padding: 24px 0; }
+            .app-shell { height: min(100dvh, 900px); border-radius: 32px; border: 6px solid #111827; }
+        }
+
+        /* Status-bar style spacer */
+        .status-spacer { height: env(safe-area-inset-top); flex-shrink: 0; }
+
+        .app-bar {
+            flex: 0 0 auto;
+            background: rgba(246, 247, 251, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+            position: relative;
+            z-index: 30;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .icon-btn:active { transform: scale(0.9); }
+
+        #appMain {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px 16px calc(96px + env(safe-area-inset-bottom));
+            scroll-behavior: smooth;
+        }
+
+        /* ================= BOTTOM NAV (thanh điều hướng app) ================= */
+        .bottom-nav {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(15,23,42,0.07);
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 40;
+        }
+        .bottom-nav-inner {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .tab-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 10px 4px 8px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            background: transparent;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+        .tab-btn .nav-ico {
+            font-size: 21px;
+            line-height: 1;
+            transform: translateY(0);
+            transition: transform 0.2s ease;
+        }
+        .tab-btn.active {
+            color: #2563eb;
+            background: transparent;
+            box-shadow: none;
+        }
+        .tab-btn.active .nav-ico { transform: translateY(-2px) scale(1.08); }
+        .tab-btn.active::before {
+            content: "";
+            position: absolute;
+            top: 2px;
+            width: 22px;
+            height: 3px;
+            border-radius: 99px;
+            background: #2563eb;
+        }
+
+        /* ================= TAB CONTENT ================= */
+        .tab-content {
+            display: none;
+            animation: fadeTab 0.25s ease;
+        }
+        .tab-content.active { display: block; }
+        @keyframes fadeTab {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ================= CARDS & MISC ================= */
+        .fee-card {
+            transition: all 0.2s ease;
+        }
+        .fee-card:active { transform: scale(0.98); }
+
+        .avatar-circle {
+            width: 44px; height: 44px; border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 15px; flex-shrink: 0;
+            color: white;
+        }
+
+        .checkbox-container:hover input ~ .checkmark {
+            background-color: #e2e8f0;
+        }
+        .checkbox-container input:checked ~ .checkmark {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+            color: white !important;
+        }
+        .checkmark {
+            border-radius: 9999px !important;
+            transition: all 0.15s ease;
+        }
+
+        /* ================= BOTTOM SHEET MODALS ================= */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 0 auto;
+            position: relative;
+            top: auto;
+            padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.25);
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            max-height: 88vh;
+            overflow-y: auto;
+            animation: sheetUp 0.28s cubic-bezier(.2,.9,.3,1);
+        }
+        @keyframes sheetUp {
+            from { transform: translateY(24px); opacity: 0.4; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .sheet-handle {
+            width: 40px; height: 5px;
+            border-radius: 99px;
+            background: #e2e8f0;
+            margin: 6px auto 14px;
+        }
+
+        .toast {
+            animation: slideUp 0.3s ease forwards;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .receipt-row {
+            display: grid;
+            grid-template-columns: 40% 20% 20% 20%;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .receipt-header {
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .session-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+            gap: 8px;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+        .session-item {
+            padding: 6px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .notes-section {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+        }
+
+        .segmented {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            background: #eef1f6;
+            border-radius: 14px;
+            padding: 4px;
+        }
+
+        /* Custom scrollbar (mobile app style - thin, unobtrusive) */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+        @media print {
+            .no-print, .app-bar, .bottom-nav, .status-spacer {
+                display: none !important;
+            }
+            body * {
+                visibility: hidden;
+            }
+            #printable-receipt, #printable-receipt * {
+                visibility: visible;
+            }
+            #printable-receipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-width: 100%;
+                background-color: white !important;
+                box-shadow: none !important;
+                padding: 20px;
+                border-radius: 0;
+                max-height: none;
+            }
+            .app-shell {
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+            }
+
+            /* Đảm bảo đầu trang và cuối trang nền trắng */
+            .modal-content,
+            #printable-receipt,
+            #receiptContent,
+            .studentSection,
+            .mb-6.p-4.border.rounded-lg.bg-gray-50 {
+                background-color: white !important;
+            }
+
+            .bg-gray-50 {
+                background-color: white !important;
+            }
+
+            .notes-section {
+                background-color: #fffbeb !important;
+                border-left: 4px solid #f59e0b;
+            }
+
+            .receipt-row {
+                background-color: white !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="app-shell">
+        <div class="status-spacer"></div>
+
+        <!-- ================= APP BAR ================= -->
+        <header class="app-bar px-4 py-3 flex items-center justify-between">
+            <div class="min-w-0">
+                <h1 id="appBarTitle" class="text-[17px] font-bold text-gray-900 leading-tight truncate">Học viên</h1>
+                <p class="text-[11px] text-gray-400 leading-tight">PM Tính Học Phí · v2.6</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button id="whatsNewBtn" class="icon-btn bg-indigo-50 text-indigo-600" aria-label="What's new">✨</button>
+                <button id="addStudentBtn" class="icon-btn bg-blue-600 text-white shadow-md shadow-blue-600/30" aria-label="Thêm học viên">
+                    <span class="text-2xl leading-none -mt-0.5">+</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ================= MAIN SCROLLABLE CONTENT ================= -->
+        <main id="appMain">
+
+            <!-- ================= TAB 1: HỌC VIÊN ================= -->
+            <div id="studentsTab" class="tab-content active">
+
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Quản lý học viên</h2>
+                    <p class="text-gray-500 text-sm mt-0.5">Thêm, sửa, xóa và theo dõi học viên</p>
+                </div>
+
+                <div class="flex items-center justify-between mb-3 px-0.5">
+                    <h3 class="text-xs font-bold text-gray-400 tracking-wide uppercase">Danh sách học viên</h3>
+                    <span id="totalStudentsPill" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full"></span>
+                </div>
+
+                <div id="studentsSidebarList" class="space-y-3 pr-0.5 custom-scroll"></div>
+
+            </div>
+
+            <!-- ================= TAB 2: ĐIỂM DANH ================= -->
+            <div id="attendanceTab" class="tab-content">
+
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Điểm danh</h2>
+                    <p class="text-gray-500 text-sm mt-0.5">Chọn học viên và đánh dấu buổi học</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-400 tracking-wide uppercase mb-2">Học viên</label>
+                    <select id="studentSelect"
+                            class="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-[15px] shadow-sm">
+                        <option value="">-- Chọn học viên --</option>
+                    </select>
+                </div>
+
+                <div class="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
+
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="prevMonthBtn"
+                                class="icon-btn bg-gray-100 text-gray-600 text-base">←</button>
+
+                        <h3 id="currentMonthYear"
+                            class="text-[15px] font-bold text-gray-800 text-center"></h3>
+
+                        <button id="nextMonthBtn"
+                                class="icon-btn bg-gray-100 text-gray-600 text-base">→</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 tracking-wide uppercase mb-3">Buổi học trong tháng</label>
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ================= TAB 3: TỔNG KẾT ================= -->
+            <div id="summaryTab" class="tab-content">
+
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Tổng kết học phí</h2>
+                    <p class="text-gray-500 text-sm mt-0.5">Xem tổng quan và xuất phiếu học phí</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-5 text-white shadow-lg shadow-blue-600/20 mb-5">
+                    <p class="text-blue-100 text-sm">Tổng học phí tháng này</p>
+                    <p class="text-3xl font-extrabold mt-1"><span id="totalFees">0</span> <span class="text-xl font-bold">đ</span></p>
+                    <div class="mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-sm">
+                        <span class="text-blue-100">Tổng số học viên</span>
+                        <span id="totalStudents" class="font-bold">0</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button id="showReceiptBtn"
+                            class="w-full bg-green-600 active:bg-green-700 text-white py-4 px-5 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+                        📄 Xem phiếu học phí
+                    </button>
+
+                    <button id="clearAllBtn"
+                            class="w-full bg-red-50 active:bg-red-100 text-red-600 py-4 px-5 rounded-2xl font-semibold flex items-center justify-center gap-2 transition">
+                        🗑️ Xóa tất cả dữ liệu
+                    </button>
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- ================= BOTTOM NAV ================= -->
+        <nav class="bottom-nav">
+            <div class="bottom-nav-inner">
+                <button class="tab-btn active" data-tab="studentsTab">
+                    <span class="nav-ico">👨‍🎓</span>
+                    <span>Học viên</span>
+                </button>
+                <button class="tab-btn" data-tab="attendanceTab">
+                    <span class="nav-ico">📅</span>
+                    <span>Điểm danh</span>
+                </button>
+                <button class="tab-btn" data-tab="summaryTab">
+                    <span class="nav-ico">💰</span>
+                    <span>Tổng kết</span>
+                </button>
+            </div>
+        </nav>
+
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 items-center w-[90%] max-w-[440px] pointer-events-none"></div>
+
+    <!-- ====================== ALL MODALS (bottom sheets) ====================== -->
+
+    <!-- Add/Edit Student Modal -->
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-xl font-bold text-gray-900" id="modalTitle">Thêm học viên mới</h2>
+                <button id="closeAddStudentModal" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tên học viên <span class="text-red-500">*</span></label>
+                    <input type="text" id="studentName" placeholder="Ví dụ: Nguyễn Văn A"
+                           class="w-full px-4 py-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Lớp</label>
+                    <input type="text" id="studentClass" placeholder="Ví dụ: 9A1"
+                           class="w-full px-4 py-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Đơn giá / buổi (VND)</label>
+                    <input type="number" id="feeRate" value="100000" step="5000" min="0"
+                           class="w-full px-4 py-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button id="cancelAddStudentBtn"
+                        class="flex-1 py-3.5 bg-gray-100 active:bg-gray-200 text-gray-700 rounded-2xl font-medium">
+                    Hủy
+                </button>
+                <button id="saveStudentBtn"
+                        class="flex-1 py-3.5 bg-blue-600 active:bg-blue-700 text-white rounded-2xl font-medium">
+                    Lưu học viên
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Discount Modal -->
+    <div id="editDiscountModal" class="modal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-900">Chỉnh sửa giảm giá <span class="text-xs font-normal text-gray-400 block">(tháng hiện tại)</span></h2>
+                <button id="closeEditDiscountBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="editDiscountInput">Giảm giá (%)</label>
+                <input type="number" id="editDiscountInput" min="0" max="100" step="0.1"
+                       class="w-full px-4 py-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập % giảm giá">
+            </div>
+            <div class="flex gap-3">
+                <button id="cancelEditDiscountBtn" class="flex-1 py-3.5 bg-gray-100 active:bg-gray-200 rounded-2xl font-medium">Hủy</button>
+                <button id="saveEditDiscountBtn" class="flex-1 py-3.5 bg-blue-600 active:bg-blue-700 text-white rounded-2xl font-medium">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Notes Modal -->
+    <div id="editNotesModal" class="modal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-900">Chỉnh sửa ghi chú <span class="text-xs font-normal text-gray-400 block">(tháng hiện tại)</span></h2>
+                <button id="closeEditNotesBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="editNotesTextarea">Ghi chú cho học viên</label>
+                <textarea id="editNotesTextarea" rows="5"
+                          class="w-full px-4 py-3.5 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập ghi chú..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button id="cancelEditNotesBtn" class="flex-1 py-3.5 bg-gray-100 active:bg-gray-200 rounded-2xl font-medium">Hủy</button>
+                <button id="saveEditNotesBtn" class="flex-1 py-3.5 bg-blue-600 active:bg-blue-700 text-white rounded-2xl font-medium">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Select Students Modal -->
+    <div id="selectStudentsModal" class="modal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-900">Chọn học viên &amp; tháng</h2>
+                <button id="closeSelectModalBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- Month Selection -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-gray-400 tracking-wide uppercase mb-2">Chọn tháng (gộp nhiều tháng)</label>
+                <div id="monthSelection" class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-2xl bg-gray-50"></div>
+            </div>
+
+            <div id="selectStudentsList" class="mb-3 max-h-64 overflow-y-auto border border-gray-200 rounded-2xl p-1.5"></div>
+            <div class="flex justify-between items-center mb-4 px-1">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="selectAllStudents" class="w-5 h-5 rounded">
+                    <span class="text-sm font-medium">Chọn tất cả</span>
+                </label>
+                <span id="selectedCount" class="text-xs text-gray-500 font-medium">0 học viên được chọn</span>
+            </div>
+            <div class="flex gap-3">
+                <button id="cancelSelectBtn" class="flex-1 py-3.5 bg-gray-100 active:bg-gray-200 text-gray-700 rounded-2xl font-medium">Hủy</button>
+                <button id="generateReceiptBtn" class="flex-[1.4] py-3.5 bg-green-600 active:bg-green-700 text-white rounded-2xl font-medium disabled:opacity-50" disabled>
+                    Xuất phiếu (gộp tháng)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="modal">
+        <div class="modal-content" id="printable-receipt" style="max-width: 480px; background: white;">
+            <div class="sheet-handle no-print"></div>
+
+            <div class="flex justify-end mb-1 no-print">
+                <button id="closeModalBtn" class="icon-btn bg-gray-100 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-blue-600">PHIẾU BÁO HỌC PHÍ</h2>
+                <h3 class="text-lg font-semibold text-gray-800 mt-2"><span id="receiptMonthDisplay"></span></h3>
+            </div>
+
+            <div class="flex justify-between mb-6 text-xs">
+                <p><strong>Ngày xuất:</strong> <span id="receiptDate"></span></p>
+                <p><strong>Mã phiếu:</strong> HPDK-<span id="receiptNumber"></span></p>
+            </div>
+
+            <div id="receiptContent"></div>
+
+            <div class="mt-6 text-right">
+                <p class="text-lg font-bold">TỔNG CỘNG: <span id="receiptTotalFee" class="text-blue-600">0</span> đ</p>
+            </div>
+
+            <div class="mt-8 flex justify-between text-sm">
+                <div class="text-center">
+                    <p class="font-bold">Phụ huynh học viên</p>
+                    <p class="text-xs text-gray-500 mt-4">(Ký, ghi rõ họ tên)</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-bold">Người lập phiếu</p>
+                    <p class="text-xs text-gray-500 mt-4">(Ký, ghi rõ họ tên)</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-center no-print">
+                <button id="printReceiptBtn" class="bg-blue-600 active:bg-blue-700 text-white py-3 px-8 rounded-2xl font-medium transition">
+                    In phiếu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- What's New Modal -->
+    <div id="whatsNewModal" class="modal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-indigo-700">Cập nhật phiên bản 2.6</h2>
+                <button id="closeWhatsNewBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-3 text-gray-700 text-sm">
+                <p><strong>Thay đổi chính:</strong></p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Thêm tính năng gộp học phí nhiều tháng</li>
+                    <li>Giao diện mới theo phong cách ứng dụng di động</li>
+                </ul>
+                <p class="text-sm italic mt-6">Cảm ơn bạn đã sử dụng phần mềm!</p>
+            </div>
+            <div class="mt-6">
+                <button id="closeWhatsNewConfirmBtn" class="w-full bg-indigo-600 active:bg-indigo-700 text-white py-3.5 rounded-2xl font-medium">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+ <script>
+    // === JSONBIN CONFIG ===
+    const JSONBIN_BIN_ID = "69fbed1dc0954111d8e9de38";
+    const JSONBIN_MASTER_KEY = "$2a$10$w8HuZEOH5lKslhwqq1vyc.pW/hNhvuAzCkMse5cgH4R9cX.n27ISO";
+    const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+    // === MAIN VARIABLES ===
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let students = [];
+    let lastSavedState = null;
+    let currentEditingStudentId = null;
+    let isEditingStudent = false;
+
+    // === THÊM CHO TÍNH NĂNG GỘP THÁNG ===
+    let selectedMonths = [];
+
+    // Helper functions
+    function getCurrentMonthKey() {
+        return `${currentMonth + 1}-${currentYear}`;
+    }
+
+    function getMonthKey(m, y) {
+        return `${m + 1}-${y}`;
+    }
+
+    function getAvailableMonths() {
+        const months = [];
+        let m = currentMonth;
+        let y = currentYear;
+        for (let i = 0; i < 12; i++) {
+            months.unshift({month: m, year: y, key: getMonthKey(m, y)});
+            m--;
+            if (m < 0) { m = 11; y--; }
+        }
+        return months;
+    }
+
+        function renderMonthSelection() {
+        monthSelectionEl.innerHTML = '';
+        const available = getAvailableMonths();
+        selectedMonths = [getCurrentMonthKey()]; // Mặc định tháng hiện tại
+
+        available.forEach(({month, year, key}) => {
+            const monthName = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'][month];
+            const isSelected = selectedMonths.includes(key);
+            
+            const div = document.createElement('div');
+            div.className = `p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-white ${isSelected ? 'bg-blue-50 border-blue-500' : 'bg-white'}`;
+            div.innerHTML = `
+                <input type="checkbox" class="month-checkbox w-4 h-4" data-key="${key}" ${isSelected ? 'checked' : ''}>
+                <span class="text-sm">${monthName} ${year}</span>
+            `;
+            monthSelectionEl.appendChild(div);
+        });
+
+        document.querySelectorAll('.month-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const key = this.dataset.key;
+                if (this.checked) {
+                    if (!selectedMonths.includes(key)) selectedMonths.push(key);
+                } else {
+                    selectedMonths = selectedMonths.filter(k => k !== key);
+                }
+                if (selectedMonths.length === 0) {
+                    this.checked = true;
+                    selectedMonths = [key];
+                }
+            });
+        });
+    }
+
+    // === DOM ELEMENTS ===
+    const studentNameEl = document.getElementById('studentName');
+    const studentClassEl = document.getElementById('studentClass');
+    const feeRateEl = document.getElementById('feeRate');
+    const addStudentBtn = document.getElementById('addStudentBtn');
+    const studentSelectEl = document.getElementById('studentSelect');
+    const calendarGridEl = document.getElementById('calendarGrid');
+    const currentMonthYearEl = document.getElementById('currentMonthYear');
+    const prevMonthBtn = document.getElementById('prevMonthBtn');
+    const nextMonthBtn = document.getElementById('nextMonthBtn');
+    const studentsListEl = document.getElementById('studentsSidebarList'); // Danh sách bên trái
+    const totalStudentsEl = document.getElementById('totalStudents');
+    const totalFeesEl = document.getElementById('totalFees');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const showReceiptBtn = document.getElementById('showReceiptBtn');
+    const monthSelectionEl = document.getElementById('monthSelection');
+
+    // Modal Elements
+    const addStudentModal = document.getElementById('addStudentModal');
+    const closeAddStudentModal = document.getElementById('closeAddStudentModal');
+    const cancelAddStudentBtn = document.getElementById('cancelAddStudentBtn');
+    const saveStudentBtn = document.getElementById('saveStudentBtn');
+    const modalTitle = document.getElementById('modalTitle');
+
+    const receiptModal = document.getElementById('receiptModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const printReceiptBtn = document.getElementById('printReceiptBtn');
+    const receiptContentEl = document.getElementById('receiptContent');
+    const receiptTotalFeeEl = document.getElementById('receiptTotalFee');
+    const receiptDateEl = document.getElementById('receiptDate');
+    const receiptNumberEl = document.getElementById('receiptNumber');
+    const receiptMonthDisplay = document.getElementById('receiptMonthDisplay');
+
+    const selectStudentsModal = document.getElementById('selectStudentsModal');
+    const selectStudentsListEl = document.getElementById('selectStudentsList');
+    const selectAllStudentsEl = document.getElementById('selectAllStudents');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const generateReceiptBtn = document.getElementById('generateReceiptBtn');
+    const closeSelectModalBtn = document.getElementById('closeSelectModalBtn');
+    const cancelSelectBtn = document.getElementById('cancelSelectBtn');
+
+    const editNotesModal = document.getElementById('editNotesModal');
+    const editNotesTextarea = document.getElementById('editNotesTextarea');
+    const closeEditNotesBtn = document.getElementById('closeEditNotesBtn');
+    const cancelEditNotesBtn = document.getElementById('cancelEditNotesBtn');
+    const saveEditNotesBtn = document.getElementById('saveEditNotesBtn');
+
+    const editDiscountModal = document.getElementById('editDiscountModal');
+    const editDiscountInput = document.getElementById('editDiscountInput');
+    const closeEditDiscountBtn = document.getElementById('closeEditDiscountBtn');
+    const cancelEditDiscountBtn = document.getElementById('cancelEditDiscountBtn');
+    const saveEditDiscountBtn = document.getElementById('saveEditDiscountBtn');
+
+    const whatsNewModal = document.getElementById('whatsNewModal');
+    const closeWhatsNewBtn = document.getElementById('closeWhatsNewBtn');
+    const closeWhatsNewConfirmBtn = document.getElementById('closeWhatsNewConfirmBtn');
+
+    const toastContainer = document.getElementById('toastContainer');
+
+    // Helper function
+    function getCurrentMonthKey() {
+        return `${currentMonth + 1}-${currentYear}`;
+    }
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-white max-w-xs
+                           ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
+        toast.innerHTML = `
+            <span>${message}</span>
+        `;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.transition = 'all 0.3s';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+        // ====================== CORE FUNCTIONS ======================
+
+    async function autoSave() {
+        if (students.length === 0) return;
+        try {
+            await fetch(JSONBIN_API_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': JSONBIN_MASTER_KEY,
+                    'X-Bin-Versioning': 'false'
+                },
+                body: JSON.stringify({ students: students, lastUpdated: new Date().toISOString() })
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadFromJsonBin(silent = false) {
+        try {
+            const res = await fetch(`${JSONBIN_API_URL}/latest`, {
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.record?.students) {
+                    students = data.record.students.map(s => ({
+                        ...s,
+                        class: s.class || '',
+                        discounts: s.discounts || {},
+                        notes: s.notes || {},
+                        sessions: s.sessions || {}
+                    }));
+                    if (!silent) showToast('✅ Đã tải dữ liệu từ JSONBin thành công!', 'success');
+                    return true;
+                }
+            }
+        } catch (e) {
+            if (!silent) showToast('❌ Lỗi khi tải dữ liệu', 'error');
+        }
+    }
+
+    async function saveToJsonBin() {
+        if (students.length === 0) return showToast('Không có dữ liệu để lưu!', 'error');
+        try {
+            await fetch(JSONBIN_API_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': JSONBIN_MASTER_KEY,
+                    'X-Bin-Versioning': 'false'
+                },
+                body: JSON.stringify({ students, lastUpdated: new Date().toISOString() })
+            });
+            showToast('✅ Đã lưu dữ liệu thành công!', 'success');
+        } catch (e) {
+            showToast('❌ Lỗi khi lưu dữ liệu', 'error');
+        }
+    }
+
+    function addOrUpdateStudent() {
+        const name = studentNameEl.value.trim();
+        if (!name) {
+            showToast('Vui lòng nhập tên học viên!', 'error');
+            return;
+        }
+
+        if (!isEditingStudent && students.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+            showToast('Học viên này đã tồn tại!', 'error');
+            return;
+        }
+
+        if (isEditingStudent && currentEditingStudentId) {
+            const student = students.find(s => s.id === currentEditingStudentId);
+            if (student) {
+                student.name = name;
+                student.class = studentClassEl.value.trim();
+                student.feeRate = parseInt(feeRateEl.value) || 100000;
+            }
+            showToast('✅ Cập nhật học viên thành công!', 'success');
+        } else {
+            students.push({
+                id: Date.now().toString(),
+                name: name,
+                class: studentClassEl.value.trim(),
+                feeRate: parseInt(feeRateEl.value) || 100000,
+                discounts: {},
+                notes: {},
+                sessions: {}
+            });
+            showToast('✅ Thêm học viên thành công!', 'success');
+        }
+
+        autoSave();
+        renderStudentsSidebar();
+        updateStudentSelect();
+        updateSummary();
+        closeAddStudentModalFn();
+    }
+
+    function deleteStudent(id) {
+        if (confirm('Bạn có chắc muốn xóa học viên này?')) {
+            students = students.filter(s => s.id !== id);
+            autoSave();
+            renderStudentsSidebar();
+            updateStudentSelect();
+            updateSummary();
+            updateAttendanceCheckboxes();
+            showToast('🗑️ Đã xóa học viên', 'success');
+        }
+    }
+
+    function editStudent(id) {
+        const student = students.find(s => s.id === id);
+        if (!student) return;
+
+        isEditingStudent = true;
+        currentEditingStudentId = id;
+
+        modalTitle.textContent = 'Sửa thông tin học viên';
+        studentNameEl.value = student.name;
+        studentClassEl.value = student.class || '';
+        feeRateEl.value = student.feeRate;
+
+        addStudentModal.style.display = 'block';
+    }
+
+// Render danh sách học viên ở sidebar (trái) - Mobile Friendly + Gắn sự kiện luôn
+function renderStudentsSidebar() {
+    studentsListEl.innerHTML = '';
+    const key = getCurrentMonthKey();
+    const avatarColors = ['#2563eb','#059669','#d97706','#db2777','#7c3aed','#0891b2','#dc2626'];
+
+    const totalStudentsPillEl = document.getElementById('totalStudentsPill');
+    if (totalStudentsPillEl) totalStudentsPillEl.textContent = `${students.length} học viên`;
+
+    if (students.length === 0) {
+        studentsListEl.innerHTML = `
+            <div class="text-center py-14 text-gray-400">
+                <div class="text-4xl mb-2">👨‍🎓</div>
+                <p class="text-sm">Chưa có học viên nào</p>
+                <p class="text-xs mt-1">Nhấn nút + ở góc trên để thêm học viên</p>
+            </div>
+        `;
+        return;
+    }
+
+    students.forEach((student, idx) => {
+        const sessions = student.sessions[key] || [];
+        const discount = student.discounts[key] || 0;
+        const totalFee = sessions.length * student.feeRate * (1 - discount / 100);
+        const initial = (student.name || '?').trim().charAt(0).toUpperCase();
+        const avatarColor = avatarColors[idx % avatarColors.length];
+
+        const div = document.createElement('div');
+        div.className = 'fee-card bg-white border border-gray-100 rounded-2xl p-3.5 shadow-sm';
+
+        div.innerHTML = `
+            <div class="flex items-start gap-3">
+
+                <div class="avatar-circle" style="background:${avatarColor}">${initial}</div>
+
+                <!-- THÔNG TIN -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="font-semibold text-gray-900 text-[15px] truncate">
+                            ${student.name}
+                        </p>
+                        <span class="font-bold text-emerald-600 text-sm flex-shrink-0">
+                            ${totalFee.toLocaleString()}đ
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        ${student.class ? `Lớp ${student.class} · ` : ''}${sessions.length} buổi · ${student.feeRate.toLocaleString()}đ/buổi
+                    </p>
+
+                    ${discount ? `
+                        <div class="inline-block mt-1.5 text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                            Giảm giá ${discount}%
+                        </div>
+                    ` : ''}
+
+                    ${student.notes?.[key] ? `
+                        <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-2 text-xs text-gray-700 mt-2 whitespace-pre-line">
+                            📝 ${student.notes[key]}
+                        </div>
+                    ` : ''}
+
+                    <!-- NÚT THAO TÁC -->
+                    <div class="flex gap-1.5 mt-2.5">
+                        <button
+                            class="edit-notes-btn flex-1 bg-yellow-50 active:bg-yellow-100 text-yellow-700 text-[11px] font-semibold py-2 rounded-xl transition"
+                            data-id="${student.id}">
+                            📝 Ghi chú
+                        </button>
+
+                        <button
+                            class="edit-discount-btn flex-1 bg-green-50 active:bg-green-100 text-green-700 text-[11px] font-semibold py-2 rounded-xl transition"
+                            data-id="${student.id}">
+                            💸 Giảm giá
+                        </button>
+
+                        <button
+                            class="edit-student-btn flex-1 bg-blue-50 active:bg-blue-100 text-blue-700 text-[11px] font-semibold py-2 rounded-xl transition"
+                            data-id="${student.id}">
+                            ✏️ Sửa
+                        </button>
+
+                        <button
+                            class="delete-student-btn flex-1 bg-red-50 active:bg-red-100 text-red-700 text-[11px] font-semibold py-2 rounded-xl transition"
+                            data-id="${student.id}">
+                            🗑️ Xóa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        studentsListEl.appendChild(div);
+    });
+
+    // ====================== GẮN SỰ KIỆN NGAY SAU KHI RENDER ======================
+    document.querySelectorAll('.edit-student-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopImmediatePropagation();
+            editStudent(this.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.delete-student-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopImmediatePropagation();
+            deleteStudent(this.dataset.id);
+        });
+    });
+    document.querySelectorAll('.edit-notes-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.stopImmediatePropagation();
+        editNotes(this.dataset.id);
+    });
+});
+
+document.querySelectorAll('.edit-discount-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.stopImmediatePropagation();
+        editDiscount(this.dataset.id);
+    });
+});
+}
+    function clearAllData() {
+        if (confirm('XÓA TOÀN BỘ DỮ LIỆU?\nHành động này không thể hoàn tác!')) {
+            students = [];
+            autoSave();
+            renderStudentsSidebar();
+            updateStudentSelect();
+            updateSummary();
+            showToast('🗑️ Đã xóa tất cả dữ liệu', 'success');
+        }
+    }
+
+    // ====================== CALENDAR FUNCTIONS ======================
+    function generateCalendar() {
+        calendarGridEl.innerHTML = '';
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        let startingDay = firstDay.getDay();
+        startingDay = (startingDay === 0) ? 6 : startingDay - 1;
+
+        for (let i = 0; i < startingDay; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'h-14';
+            calendarGridEl.appendChild(empty);
+        }
+
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(currentYear, currentMonth, day);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+            const dayCell = document.createElement('div');
+            dayCell.className = 'flex flex-col items-center gap-1';
+            dayCell.innerHTML = `
+                <span class="text-[10px] text-gray-400 font-medium">${["CN","T2","T3","T4","T5","T6","T7"][date.getDay()]}</span>
+                <label class="checkbox-container relative cursor-pointer">
+                    <input type="checkbox" class="hidden" data-date="${formattedDate}">
+                    <span class="checkmark relative flex items-center justify-center w-8 h-8 border border-gray-200 text-[13px] font-medium text-gray-700 bg-gray-50"></span>
+                </label>
+            `;
+            const dayNumSpan = dayCell.querySelector('.checkmark');
+            dayNumSpan.textContent = day;
+            calendarGridEl.appendChild(dayCell);
+        }
+    }
+
+    function handleCalendarChange(e) {
+        if (e.target.type === 'checkbox' && e.target.dataset.date) {
+            toggleSession(e.target.dataset.date, e.target.checked);
+        }
+    }
+
+    function toggleSession(date, attended) {
+        const studentId = studentSelectEl.value;
+        if (!studentId) {
+            showToast('Vui lòng chọn học viên trước!', 'error');
+            return;
+        }
+        const student = students.find(s => s.id === studentId);
+        const key = getCurrentMonthKey();
+        if (!student.sessions[key]) student.sessions[key] = [];
+
+        if (attended) {
+            if (!student.sessions[key].includes(date)) student.sessions[key].push(date);
+        } else {
+            student.sessions[key] = student.sessions[key].filter(d => d !== date);
+        }
+
+        autoSave();
+        renderStudentsSidebar();
+        updateSummary();
+    }
+
+    function updateAttendanceCheckboxes() {
+        const studentId = studentSelectEl.value;
+        const key = getCurrentMonthKey();
+        document.querySelectorAll('input[data-date]').forEach(cb => {
+            const attended = studentId && students.find(s => s.id === studentId)?.sessions[key]?.includes(cb.dataset.date) || false;
+            cb.checked = attended;
+        });
+    }
+
+    function showPreviousMonth() {
+        currentMonth--;
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        updateMonthYearDisplay();
+        generateCalendar();
+        updateAttendanceCheckboxes();
+        renderStudentsSidebar();
+        updateSummary();
+    }
+
+    function showNextMonth() {
+        currentMonth++;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        updateMonthYearDisplay();
+        generateCalendar();
+        updateAttendanceCheckboxes();
+        renderStudentsSidebar();
+        updateSummary();
+    }
+
+    function updateMonthYearDisplay() {
+        const months = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+        currentMonthYearEl.textContent = `${months[currentMonth]} ${currentYear}`;
+    }
+
+    function updateStudentSelect() {
+        studentSelectEl.innerHTML = '<option value="">-- Chọn học viên --</option>';
+        students.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = `${s.name} ${s.class ? `(${s.class})` : ''}`;
+            studentSelectEl.appendChild(opt);
+        });
+    }
+
+    function updateSummary() {
+        let total = 0;
+        const key = getCurrentMonthKey();
+        students.forEach(s => {
+            const count = (s.sessions[key] || []).length;
+            const discount = s.discounts[key] || 0;
+            total += count * s.feeRate * (1 - discount / 100);
+        });
+        totalStudentsEl.textContent = students.length;
+        totalFeesEl.textContent = total.toLocaleString();
+    }
+
+    // ====================== TAB SYSTEM ======================
+
+    function switchTab(tabId) {
+
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        const selectedTab = document.getElementById(tabId);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+
+        const activeButton = document.querySelector(`[data-tab="${tabId}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+
+        const titles = { studentsTab: 'Học viên', attendanceTab: 'Điểm danh', summaryTab: 'Tổng kết' };
+        const appBarTitleEl = document.getElementById('appBarTitle');
+        if (appBarTitleEl && titles[tabId]) appBarTitleEl.textContent = titles[tabId];
+
+        const appMainEl = document.getElementById('appMain');
+        if (appMainEl) appMainEl.scrollTop = 0;
+    }
+
+
+    // ====================== MODAL HELPERS ======================
+    function openAddStudentModal() {
+        isEditingStudent = false;
+        currentEditingStudentId = null;
+        modalTitle.textContent = 'Thêm học viên mới';
+        studentNameEl.value = '';
+        studentClassEl.value = '';
+        feeRateEl.value = '100000';
+        addStudentModal.style.display = 'block';
+    }
+
+    function closeAddStudentModalFn() {
+        addStudentModal.style.display = 'none';
+    }
+
+    // Các hàm edit notes, discount, receipt... (giữ nguyên logic cũ)
+    function editNotes(id) {
+        currentEditingStudentId = id;
+        const student = students.find(s => s.id === id);
+        editNotesTextarea.value = student.notes[getCurrentMonthKey()] || '';
+        editNotesModal.style.display = 'block';
+    }
+
+    function saveEditNotes() {
+        if (currentEditingStudentId) {
+            const student = students.find(s => s.id === currentEditingStudentId);
+            student.notes[getCurrentMonthKey()] = editNotesTextarea.value.trim();
+            autoSave();
+            renderStudentsSidebar();
+            editNotesModal.style.display = 'none';
+            showToast('✅ Đã lưu ghi chú', 'success');
+        }
+    }
+
+    function editDiscount(id) {
+        currentEditingStudentId = id;
+        const student = students.find(s => s.id === id);
+        editDiscountInput.value = student.discounts[getCurrentMonthKey()] || 0;
+        editDiscountModal.style.display = 'block';
+    }
+
+    function saveEditDiscount() {
+        if (currentEditingStudentId) {
+            const student = students.find(s => s.id === currentEditingStudentId);
+            const val = parseFloat(editDiscountInput.value) || 0;
+            student.discounts[getCurrentMonthKey()] = Math.max(0, Math.min(100, val));
+            autoSave();
+            renderStudentsSidebar();
+            updateSummary();
+            editDiscountModal.style.display = 'none';
+            showToast('✅ Đã lưu giảm giá', 'success');
+        }
+    }
+
+    // ====================== RECEIPT FUNCTIONS (giữ nguyên) ======================
+    function updateReceiptContent(selectedStudents = students, includeNotesMap = {}) {
+        receiptContentEl.innerHTML = '';
+        const today = new Date();
+        receiptDateEl.textContent = today.toLocaleDateString('vi-VN');
+       
+        const monthsDisplay = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+        
+        // === PHẦN TITLE - SẮP XẾP THEO THỨ TỰ THÁNG ===
+        let titleText = '';
+
+        if (selectedMonths.length === 1) {
+            const [mStr, yStr] = selectedMonths[0].split('-');
+            titleText = `${monthsDisplay[parseInt(mStr)-1]} / ${yStr}`;
+        } else {
+            // Sắp xếp tháng theo thứ tự thời gian
+            const sortedMonths = [...selectedMonths].sort((a, b) => {
+                const [mA, yA] = a.split('-').map(Number);
+                const [mB, yB] = b.split('-').map(Number);
+                
+                if (yA !== yB) return yA - yB;
+                return mA - mB;
+            });
+
+            const monthNames = sortedMonths.map(key => {
+                const [mStr, yStr] = key.split('-');
+                return `Tháng ${monthsDisplay[parseInt(mStr)-1]}/${yStr}`;
+            });
+            
+            titleText = monthNames.join(' + ');
+        }
+        
+        document.getElementById('receiptMonthDisplay').textContent = titleText;
+        // ======================================
+           
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = String(today.getFullYear()).slice(-2);
+       
+        const currentState = JSON.stringify({ students: selectedStudents.map(s => s.id), months: selectedMonths });
+       
+        let receiptCounter = localStorage.getItem(`receiptCounter-${month}${year}`) || 0;
+        if (lastSavedState !== currentState) {
+            receiptCounter = parseInt(receiptCounter) + 1;
+            localStorage.setItem(`receiptCounter-${month}${year}`, receiptCounter);
+            lastSavedState = currentState;
+        }
+        receiptNumberEl.textContent = `${month}${year}-${String(receiptCounter).padStart(5, '0')}`;
+
+        // ... (phần còn lại của hàm giữ nguyên)
+
+        let totalFee = 0;
+        selectedStudents.forEach(student => {
+            const studentSection = document.createElement('div');
+            studentSection.className = "mb-6 p-4 border rounded-lg bg-gray-50";
+            
+            const header = document.createElement('h3');
+            header.className = "font-bold text-lg text-blue-600 mb-2";
+            header.textContent = `${student.name}${student.class ? ` - Lớp ${student.class}` : ''}`;
+            studentSection.appendChild(header);
+
+            let allSessions = [];
+            let totalSessions = 0;
+            let totalBefore = 0;
+            let totalDiscount = 0;
+
+            selectedMonths.forEach(mKey => {
+                const sessions = student.sessions[mKey] || [];
+                const count = sessions.length;
+                const disc = student.discounts[mKey] || 0;
+                const before = count * student.feeRate;
+                totalSessions += count;
+                totalBefore += before;
+                totalDiscount += before * (disc / 100);
+                allSessions = allSessions.concat(sessions);
+            });
+
+            const studentTotal = totalBefore - totalDiscount;
+            totalFee += studentTotal;
+
+            // Receipt rows
+            const rowHeader = document.createElement('div');
+            rowHeader.className = 'receipt-row receipt-header';
+            rowHeader.innerHTML = `<div>Tên học viên</div><div>Số buổi</div><div>Đơn giá</div><div>Thành tiền</div>`;
+            studentSection.appendChild(rowHeader);
+
+            const dataRow = document.createElement('div');
+            dataRow.className = 'receipt-row';
+            dataRow.innerHTML = `<div>${student.name}</div><div>${totalSessions}</div><div>${student.feeRate.toLocaleString()} đ</div><div>${totalBefore.toLocaleString()} đ</div>`;
+            studentSection.appendChild(dataRow);
+
+            if (totalDiscount > 0) {
+                const discRow = document.createElement('div');
+                discRow.className = 'receipt-row text-sm text-red-600';
+                discRow.innerHTML = `<div></div><div></div><div>Giảm giá tổng:</div><div>-${totalDiscount.toLocaleString()} đ</div>`;
+                studentSection.appendChild(discRow);
+
+                const totalRow = document.createElement('div');
+                totalRow.className = 'receipt-row font-bold text-blue-600 mt-2';
+                totalRow.innerHTML = `<div></div><div></div><div>Tổng sau giảm:</div><div>${studentTotal.toLocaleString()} đ</div>`;
+                studentSection.appendChild(totalRow);
+            }
+
+            if (allSessions.length > 0) {
+                const detailTitle = document.createElement('p');
+                detailTitle.className = "font-medium mt-4";
+                detailTitle.textContent = "Chi tiết buổi học:";
+                studentSection.appendChild(detailTitle);
+                
+                const sessionGrid = document.createElement('div');
+                sessionGrid.className = "session-grid mt-2";
+                allSessions.sort((a,b) => new Date(a) - new Date(b)).forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'session-item';
+                    item.textContent = formatDisplayDate(s);
+                    sessionGrid.appendChild(item);
+                });
+                studentSection.appendChild(sessionGrid);
+            }
+
+            // Notes
+            if (includeNotesMap[student.id]) {
+                selectedMonths.forEach(mKey => {
+                    if (student.notes[mKey] && student.notes[mKey].trim()) {
+                        const notesSec = document.createElement('div');
+                        notesSec.className = "notes-section mt-4";
+                        notesSec.innerHTML = `<p><strong>GHI CHÚ:</strong> ${student.notes[mKey].replace(/\n/g, '<br>')}</p>`;
+                        studentSection.appendChild(notesSec);
+                    }
+                });
+            }
+
+            receiptContentEl.appendChild(studentSection);
+        });
+       
+        receiptTotalFeeEl.textContent = totalFee.toLocaleString();
+    }
+
+    function openSelectStudentsModal() {
+        if (students.length === 0) return showToast('Chưa có học viên nào!', 'error');
+        renderMonthSelection();
+        populateSelectStudentsList();
+        selectStudentsModal.style.display = 'block';
+    }
+
+    function populateSelectStudentsList() {
+        selectStudentsListEl.innerHTML = '';
+        students.forEach(student => {
+            let totalSessions = 0;
+            let totalFee = 0;
+            let hasNotes = false;
+
+            selectedMonths.forEach(monthKey => {
+                const sessions = student.sessions[monthKey] || [];
+                totalSessions += sessions.length;
+                const discount = student.discounts[monthKey] || 0;
+                const before = sessions.length * student.feeRate;
+                totalFee += before * (1 - discount / 100);
+                if (student.notes[monthKey] && student.notes[monthKey].trim()) hasNotes = true;
+            });
+
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-4 border-b hover:bg-gray-50 rounded-xl';
+            div.innerHTML = `
+                <div class="flex items-center flex-1">
+                    <input type="checkbox" class="student-select-checkbox w-5 h-5 mr-4" data-id="${student.id}">
+                    <div>
+                        <div class="font-medium">${student.name}</div>
+                        <div class="text-sm text-gray-600">${student.class || ''} - ${totalSessions} buổi - ${totalFee.toLocaleString()} đ (${selectedMonths.length} tháng)</div>
+                    </div>
+                </div>
+                ${hasNotes ? `
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" class="include-notes-checkbox w-4 h-4" data-id="${student.id}" checked>
+                    <span class="text-xs text-gray-500">Ghi chú</span>
+                </div>` : ''}
+            `;
+            selectStudentsListEl.appendChild(div);
+        });
+
+        document.querySelectorAll('.student-select-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateGenerateButton);
+        });
+    }
+
+    function toggleSelectAll() {
+        document.querySelectorAll('.student-select-checkbox').forEach(cb => cb.checked = selectAllStudentsEl.checked);
+        updateGenerateButton();
+    }
+
+    function updateGenerateButton() {
+        const count = document.querySelectorAll('.student-select-checkbox:checked').length;
+        selectedCountEl.textContent = `${count} học viên được chọn`;
+        generateReceiptBtn.disabled = count === 0;
+    }
+
+    function generateReceiptFromSelection() {
+        const selectedIds = Array.from(document.querySelectorAll('.student-select-checkbox:checked')).map(cb => cb.dataset.id);
+        const selected = students.filter(s => selectedIds.includes(s.id));
+        const includeNotesMap = {};
+        selectedIds.forEach(id => {
+            const cb = document.querySelector(`.include-notes-checkbox[data-id="${id}"]`);
+            includeNotesMap[id] = cb ? cb.checked : false;
+        });
+        closeSelectStudentsModal();
+        updateReceiptContent(selected, includeNotesMap);
+        receiptModal.style.display = 'block';
+    }
+
+    function closeSelectStudentsModal() {
+        selectStudentsModal.style.display = 'none';
+    }
+
+    function formatDisplayDate(str) {
+        const d = new Date(str);
+        return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    }
+
+    // ====================== KHỞI TẠO ỨNG DỤNG ======================
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Cập nhật tháng năm hiện tại
+        updateMonthYearDisplay();
+        generateCalendar();
+
+        // Tải dữ liệu từ JSONBin
+        await loadFromJsonBin(true);
+
+        // Render ban đầu
+        renderStudentsSidebar();
+        updateStudentSelect();
+        updateSummary();
+
+        // ====================== EVENT LISTENERS ======================
+
+        // ====================== TAB BUTTONS ======================
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                switchTab(this.dataset.tab);
+            });
+        });
+
+        // Nút thêm học viên
+        addStudentBtn.addEventListener('click', openAddStudentModal);
+
+        // Modal thêm/sửa học viên
+        saveStudentBtn.addEventListener('click', addOrUpdateStudent);
+        cancelAddStudentBtn.addEventListener('click', closeAddStudentModalFn);
+        closeAddStudentModal.addEventListener('click', closeAddStudentModalFn);
+
+        // Calendar
+        prevMonthBtn.addEventListener('click', showPreviousMonth);
+        nextMonthBtn.addEventListener('click', showNextMonth);
+        studentSelectEl.addEventListener('change', () => {
+            updateAttendanceCheckboxes();
+        });
+        calendarGridEl.addEventListener('change', handleCalendarChange);
+
+        // Summary buttons
+        clearAllBtn.addEventListener('click', clearAllData);
+        showReceiptBtn.addEventListener('click', openSelectStudentsModal);
+
+        // Receipt Modal
+        closeModalBtn.addEventListener('click', () => receiptModal.style.display = 'none');
+        printReceiptBtn.addEventListener('click', () => window.print());
+
+        // Select Students Modal
+        closeSelectModalBtn.addEventListener('click', closeSelectStudentsModal);
+        cancelSelectBtn.addEventListener('click', closeSelectStudentsModal);
+        selectAllStudentsEl.addEventListener('change', toggleSelectAll);
+        generateReceiptBtn.addEventListener('click', generateReceiptFromSelection);
+
+        // Edit Notes Modal
+        closeEditNotesBtn.addEventListener('click', () => editNotesModal.style.display = 'none');
+        cancelEditNotesBtn.addEventListener('click', () => editNotesModal.style.display = 'none');
+        saveEditNotesBtn.addEventListener('click', saveEditNotes);
+
+        // Edit Discount Modal
+        closeEditDiscountBtn.addEventListener('click', () => editDiscountModal.style.display = 'none');
+        cancelEditDiscountBtn.addEventListener('click', () => editDiscountModal.style.display = 'none');
+        saveEditDiscountBtn.addEventListener('click', saveEditDiscount);
+
+        // What's New Modal
+        document.getElementById('whatsNewBtn').addEventListener('click', () => {
+            whatsNewModal.style.display = 'block';
+        });
+        closeWhatsNewBtn.addEventListener('click', () => whatsNewModal.style.display = 'none');
+        closeWhatsNewConfirmBtn.addEventListener('click', () => whatsNewModal.style.display = 'none');
+
+        // Close modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target === addStudentModal) closeAddStudentModalFn();
+            if (e.target === editNotesModal) editNotesModal.style.display = 'none';
+            if (e.target === editDiscountModal) editDiscountModal.style.display = 'none';
+            if (e.target === selectStudentsModal) closeSelectStudentsModal();
+            if (e.target === receiptModal) receiptModal.style.display = 'none';
+            if (e.target === whatsNewModal) whatsNewModal.style.display = 'none';
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === "Escape") {
+                const openModals = document.querySelectorAll('.modal[style*="display: block"]');
+                if (openModals.length > 0) {
+                    openModals[openModals.length - 1].style.display = 'none';
+                }
+            }
+            // ====================== SỰ KIỆN CHO SIDEBAR ======================
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-student-btn')) {
+        editStudent(e.target.dataset.id);
+    }
+        if (e.target.classList.contains('delete-student-btn')) {
+        deleteStudent(e.target.dataset.id);
+    }
+});
+        });
+
+        showToast('Phần mềm đã sẵn sàng!', 'success');
+    });
+</script>
+</body>
+</html>
