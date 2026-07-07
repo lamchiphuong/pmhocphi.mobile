@@ -209,9 +209,18 @@
         }
         .receipt-row {
             display: grid;
-            grid-template-columns: 40% 20% 20% 20%;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
             padding: 8px 0;
             border-bottom: 1px solid #eee;
+        }
+        .receipt-row > div {
+            min-width: 0;
+            word-break: break-word;
+        }
+        .receipt-row > div:nth-child(2),
+        .receipt-row > div:nth-child(3) {
+            text-align: right;
         }
         .receipt-header {
             font-weight: bold;
@@ -1319,23 +1328,23 @@ document.querySelectorAll('.edit-discount-btn').forEach(btn => {
             // Receipt rows
             const rowHeader = document.createElement('div');
             rowHeader.className = 'receipt-row receipt-header';
-            rowHeader.innerHTML = `<div>Tên học viên</div><div>Số buổi</div><div>Đơn giá</div><div>Thành tiền</div>`;
+            rowHeader.innerHTML = `<div>Tổng số buổi</div><div>Đơn giá</div><div>Thành tiền</div>`;
             studentSection.appendChild(rowHeader);
 
             const dataRow = document.createElement('div');
             dataRow.className = 'receipt-row';
-            dataRow.innerHTML = `<div>${student.name}</div><div>${totalSessions}</div><div>${student.feeRate.toLocaleString()} đ</div><div>${totalBefore.toLocaleString()} đ</div>`;
+            dataRow.innerHTML = `<div>${totalSessions}</div><div>${student.feeRate.toLocaleString()} đ</div><div>${totalBefore.toLocaleString()} đ</div>`;
             studentSection.appendChild(dataRow);
 
             if (totalDiscount > 0) {
                 const discRow = document.createElement('div');
                 discRow.className = 'receipt-row text-sm text-red-600';
-                discRow.innerHTML = `<div></div><div></div><div>Giảm giá tổng:</div><div>-${totalDiscount.toLocaleString()} đ</div>`;
+                discRow.innerHTML = `<div></div><div>Giảm giá tổng:</div><div>-${totalDiscount.toLocaleString()} đ</div>`;
                 studentSection.appendChild(discRow);
 
                 const totalRow = document.createElement('div');
                 totalRow.className = 'receipt-row font-bold text-blue-600 mt-2';
-                totalRow.innerHTML = `<div></div><div></div><div>Tổng sau giảm:</div><div>${studentTotal.toLocaleString()} đ</div>`;
+                totalRow.innerHTML = `<div></div><div>Tổng sau giảm:</div><div>${studentTotal.toLocaleString()} đ</div>`;
                 studentSection.appendChild(totalRow);
             }
 
