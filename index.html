@@ -9,6 +9,10 @@
     <meta name="theme-color" content="#2563eb">
     <title>PM Tính Học Phí - ver 2.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase Authentication (compat SDK, dễ dùng trực tiếp bằng <script> tag) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
 
@@ -263,6 +267,50 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
 
+        /* ================= AUTH SCREEN (đăng nhập / đăng ký) ================= */
+        #authScreen {
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100dvh;
+            background: #f6f7fb;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 24px 28px calc(24px + env(safe-area-inset-bottom));
+            box-shadow: 0 0 2px rgba(0,0,0,0.06), 0 25px 60px -15px rgba(15, 23, 42, 0.35);
+        }
+        @media (min-width: 481px) {
+            #authScreen { height: min(100dvh, 900px); border-radius: 32px; border: 6px solid #111827; }
+        }
+        #authScreen.hidden { display: none; }
+        .app-shell.hidden { display: none !important; }
+        .auth-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .auth-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+        }
+        #authError {
+            display: none;
+            background: #fef2f2;
+            color: #dc2626;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-top: 4px;
+        }
+        #authLoading {
+            display: none;
+        }
+
         @media print {
             .no-print, .app-bar, .bottom-nav, .status-spacer {
                 display: none !important;
@@ -319,7 +367,44 @@
 </head>
 <body class="bg-gray-50">
 
-    <div class="app-shell">
+    <!-- ================= AUTH SCREEN (đăng nhập / đăng ký) ================= -->
+    <div id="authScreen">
+        <div class="status-spacer"></div>
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 rounded-3xl bg-blue-600 text-white flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-blue-600/30">🎓</div>
+            <h1 class="text-2xl font-bold text-gray-900">PM Tính Học Phí</h1>
+            <p class="text-gray-500 text-sm mt-1">Đăng nhập để quản lý dữ liệu của bạn</p>
+        </div>
+
+        <div class="space-y-3">
+            <input type="email" id="authEmail" placeholder="Email" autocomplete="email" class="auth-input">
+            <div class="relative">
+                <input type="password" id="authPassword" placeholder="Mật khẩu" autocomplete="current-password" class="auth-input pr-12">
+                <button type="button" id="togglePasswordBtn" class="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-gray-400 active:text-gray-600" aria-label="Hiện/ẩn mật khẩu">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="authError"></div>
+
+            <button id="authSubmitBtn" class="w-full py-3.5 bg-blue-600 active:bg-blue-700 text-white rounded-2xl font-semibold shadow-sm transition flex items-center justify-center gap-2">
+                <span id="authSubmitLabel">Đăng nhập</span>
+                <span id="authLoading">⏳</span>
+            </button>
+
+            <button id="authForgotBtn" class="w-full text-center text-sm text-blue-600 font-medium py-2">
+                Quên mật khẩu?
+            </button>
+        </div>
+
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <span id="authToggleText">Chưa có tài khoản?</span>
+            <button id="authToggleBtn" class="text-blue-600 font-semibold ml-1">Đăng ký ngay</button>
+        </div>
+    </div>
+
+    <div class="app-shell hidden">
         <div class="status-spacer"></div>
 
         <!-- ================= APP BAR ================= -->
@@ -330,6 +415,7 @@
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button id="whatsNewBtn" class="icon-btn bg-indigo-50 text-indigo-600" aria-label="What's new">✨</button>
+                <button id="logoutBtn" class="icon-btn bg-gray-100 text-gray-500" aria-label="Đăng xuất" title="Đăng xuất">🚪</button>
                 <button id="addStudentBtn" class="icon-btn bg-blue-600 text-white shadow-md shadow-blue-600/30" aria-label="Thêm học viên">
                     <span class="text-2xl leading-none -mt-0.5">+</span>
                 </button>
@@ -634,10 +720,181 @@
         </div>
     </div>
  <script>
-    // === JSONBIN CONFIG ===
-    const JSONBIN_BIN_ID = "69fbed1dc0954111d8e9de38";
-    const JSONBIN_MASTER_KEY = "$2a$10$w8HuZEOH5lKslhwqq1vyc.pW/hNhvuAzCkMse5cgH4R9cX.n27ISO";
-    const JSONBIN_API_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+    // === FIREBASE CONFIG ===
+    // 👉 Thay các giá trị bên dưới bằng config của project Firebase của bạn
+    // (Firebase Console > Project settings > General > Your apps > SDK setup and configuration)
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7UpUeaE2-pe0F4ZzmBpAUmTG8Ju4xJcY",
+        authDomain: "pmhocphi.firebaseapp.com",
+        databaseURL: "https://pmhocphi-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "pmhocphi",
+        storageBucket: "pmhocphi.firebasestorage.app",
+        messagingSenderId: "238607778628",
+        appId: "1:238607778628:web:c5245c3bc33782d0044d11",
+        measurementId: "G-XTSVPHHJHN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    // Dữ liệu học viên dùng CHUNG cho mọi tài khoản đăng nhập (yêu cầu của bạn)
+    const studentsRef = db.ref('sharedData/students');
+
+    // === DOM ELEMENTS - AUTH SCREEN ===
+    const authScreenEl = document.getElementById('authScreen');
+    const appShellEl = document.querySelector('.app-shell');
+    const authEmailEl = document.getElementById('authEmail');
+    const authPasswordEl = document.getElementById('authPassword');
+    const authErrorEl = document.getElementById('authError');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authSubmitLabelEl = document.getElementById('authSubmitLabel');
+    const authLoadingEl = document.getElementById('authLoading');
+    const authForgotBtn = document.getElementById('authForgotBtn');
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const authToggleBtn = document.getElementById('authToggleBtn');
+    const authToggleTextEl = document.getElementById('authToggleText');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    let isRegisterMode = false;
+    let appHasStarted = false; // đảm bảo chỉ khởi tạo app 1 lần
+    let suppressAuthTransition = false; // tạm ẩn việc chuyển màn hình lúc đang xử lý đăng ký
+
+    function setAuthLoading(loading) {
+        authSubmitBtn.disabled = loading;
+        authLoadingEl.style.display = loading ? 'inline' : 'none';
+    }
+
+    function showAuthError(message) {
+        authErrorEl.textContent = message;
+        authErrorEl.style.display = 'block';
+    }
+
+    function clearAuthError() {
+        authErrorEl.style.display = 'none';
+        authErrorEl.textContent = '';
+    }
+
+    // Chuyển đổi thông báo lỗi Firebase sang tiếng Việt dễ hiểu
+    function translateAuthError(error) {
+        switch (error.code) {
+            case 'auth/invalid-email': return 'Email không hợp lệ.';
+            case 'auth/user-not-found': return 'Tài khoản không tồn tại.';
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential': return 'Sai email hoặc mật khẩu.';
+            case 'auth/email-already-in-use': return 'Email này đã được đăng ký.';
+            case 'auth/weak-password': return 'Mật khẩu quá yếu (tối thiểu 6 ký tự).';
+            case 'auth/too-many-requests': return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
+            default: return 'Đã xảy ra lỗi. Vui lòng thử lại.';
+        }
+    }
+
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        clearAuthError();
+        if (isRegisterMode) {
+            authSubmitLabelEl.textContent = 'Đăng ký';
+            authToggleTextEl.textContent = 'Đã có tài khoản?';
+            authToggleBtn.textContent = 'Đăng nhập';
+            authForgotBtn.style.display = 'none';
+        } else {
+            authSubmitLabelEl.textContent = 'Đăng nhập';
+            authToggleTextEl.textContent = 'Chưa có tài khoản?';
+            authToggleBtn.textContent = 'Đăng ký ngay';
+            authForgotBtn.style.display = 'block';
+        }
+    }
+
+    async function handleAuthSubmit() {
+        clearAuthError();
+        const email = authEmailEl.value.trim();
+        const password = authPasswordEl.value;
+
+        if (!email || !password) {
+            showAuthError('Vui lòng nhập đầy đủ email và mật khẩu.');
+            return;
+        }
+
+        setAuthLoading(true);
+        try {
+            if (isRegisterMode) {
+                suppressAuthTransition = true; // không cho app chớp hiện lên trong lúc đăng ký
+                await auth.createUserWithEmailAndPassword(email, password);
+                await auth.signOut();
+                suppressAuthTransition = false;
+
+                // Quay lại chế độ đăng nhập, yêu cầu người dùng tự đăng nhập
+                isRegisterMode = false;
+                authSubmitLabelEl.textContent = 'Đăng nhập';
+                authToggleTextEl.textContent = 'Chưa có tài khoản?';
+                authToggleBtn.textContent = 'Đăng ký ngay';
+                authForgotBtn.style.display = 'block';
+                authPasswordEl.value = '';
+                showToast('✅ Đăng ký thành công! Vui lòng đăng nhập.', 'success');
+            } else {
+                await auth.signInWithEmailAndPassword(email, password);
+            }
+            // onAuthStateChanged sẽ tự xử lý phần hiển thị app sau khi đăng nhập thành công
+        } catch (error) {
+            suppressAuthTransition = false;
+            showAuthError(translateAuthError(error));
+        } finally {
+            setAuthLoading(false);
+        }
+    }
+
+    async function handleForgotPassword() {
+        clearAuthError();
+        const email = authEmailEl.value.trim();
+        if (!email) {
+            showAuthError('Nhập email của bạn ở trên rồi bấm "Quên mật khẩu?" lần nữa.');
+            return;
+        }
+        try {
+            await auth.sendPasswordResetEmail(email);
+            showToast('📧 Đã gửi email đặt lại mật khẩu!', 'success');
+        } catch (error) {
+            showAuthError(translateAuthError(error));
+        }
+    }
+
+    function handleLogout() {
+        auth.signOut();
+    }
+
+    // Lắng nghe trạng thái đăng nhập
+    auth.onAuthStateChanged(function(user) {
+        if (suppressAuthTransition) return;
+        if (user) {
+            authScreenEl.classList.add('hidden');
+            appShellEl.classList.remove('hidden');
+            if (!appHasStarted) {
+                appHasStarted = true;
+                startApp();
+            }
+        } else {
+            authScreenEl.classList.remove('hidden');
+            appShellEl.classList.add('hidden');
+        }
+    });
+
+    // Gắn sự kiện cho màn hình đăng nhập
+    authSubmitBtn.addEventListener('click', handleAuthSubmit);
+    const EYE_OPEN_PATH = "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z";
+    const EYE_OFF_PATH = "M12 6c1.66 0 3 1.34 3 3 0 .35-.06.68-.17 1l2.32 2.32c1.32-1.11 2.36-2.55 2.99-4.32C18.27 6.61 14 4.5 12 4.5c-1.19 0-2.34.31-3.41.87l1.62 1.62c.51-.31 1.14-.49 1.79-.49zM2 3.27l1.44 1.44 2.09 2.09C4.11 8.11 2.11 10.05 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.32 4.35-.9l2.72 2.72L20.73 20 3.27 2.5 2 3.27zM7.53 8.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z";
+
+    authForgotBtn.addEventListener('click', handleForgotPassword);
+    togglePasswordBtn.addEventListener('click', function() {
+        const isHidden = authPasswordEl.type === 'password';
+        authPasswordEl.type = isHidden ? 'text' : 'password';
+        eyeIcon.querySelector('path').setAttribute('d', isHidden ? EYE_OFF_PATH : EYE_OPEN_PATH);
+    });
+    authToggleBtn.addEventListener('click', toggleAuthMode);
+    logoutBtn.addEventListener('click', handleLogout);
+    authPasswordEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleAuthSubmit();
+    });
+
+    // === (Đã chuyển sang Firebase Realtime Database ở trên, không dùng JSONBin nữa) ===
 
     // === MAIN VARIABLES ===
     let currentMonth = new Date().getMonth();
@@ -791,38 +1048,29 @@
     async function autoSave() {
         if (students.length === 0) return;
         try {
-            await fetch(JSONBIN_API_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': JSONBIN_MASTER_KEY,
-                    'X-Bin-Versioning': 'false'
-                },
-                body: JSON.stringify({ students: students, lastUpdated: new Date().toISOString() })
-            });
+            await studentsRef.set(students);
         } catch (e) { console.error(e); }
     }
 
     async function loadFromJsonBin(silent = false) {
         try {
-            const res = await fetch(`${JSONBIN_API_URL}/latest`, {
-                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.record?.students) {
-                    students = data.record.students.map(s => ({
-                        ...s,
-                        class: s.class || '',
-                        discounts: s.discounts || {},
-                        notes: s.notes || {},
-                        sessions: s.sessions || {}
-                    }));
-                    if (!silent) showToast('✅ Đã tải dữ liệu từ JSONBin thành công!', 'success');
-                    return true;
-                }
+            const snapshot = await studentsRef.once('value');
+            const data = snapshot.val();
+            if (data) {
+                // RTDB trả mảng hoặc object tùy dữ liệu hiện có, chuẩn hóa lại thành mảng
+                const rawList = Array.isArray(data) ? data : Object.values(data);
+                students = rawList.filter(Boolean).map(s => ({
+                    ...s,
+                    class: s.class || '',
+                    discounts: s.discounts || {},
+                    notes: s.notes || {},
+                    sessions: s.sessions || {}
+                }));
+                if (!silent) showToast('✅ Đã tải dữ liệu từ Firebase thành công!', 'success');
+                return true;
             }
         } catch (e) {
+            console.error(e);
             if (!silent) showToast('❌ Lỗi khi tải dữ liệu', 'error');
         }
     }
@@ -830,17 +1078,10 @@
     async function saveToJsonBin() {
         if (students.length === 0) return showToast('Không có dữ liệu để lưu!', 'error');
         try {
-            await fetch(JSONBIN_API_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': JSONBIN_MASTER_KEY,
-                    'X-Bin-Versioning': 'false'
-                },
-                body: JSON.stringify({ students, lastUpdated: new Date().toISOString() })
-            });
+            await studentsRef.set(students);
             showToast('✅ Đã lưu dữ liệu thành công!', 'success');
         } catch (e) {
+            console.error(e);
             showToast('❌ Lỗi khi lưu dữ liệu', 'error');
         }
     }
@@ -1464,7 +1705,8 @@ document.querySelectorAll('.edit-discount-btn').forEach(btn => {
     }
 
     // ====================== KHỞI TẠO ỨNG DỤNG ======================
-    document.addEventListener('DOMContentLoaded', async function() {
+    // Hàm này chỉ được gọi 1 lần, ngay sau khi người dùng đăng nhập thành công
+    async function startApp() {
         // Cập nhật tháng năm hiện tại
         updateMonthYearDisplay();
         generateCalendar();
@@ -1564,7 +1806,7 @@ document.querySelectorAll('.edit-discount-btn').forEach(btn => {
         });
 
         showToast('Phần mềm đã sẵn sàng!', 'success');
-    });
+    }
 </script>
 </body>
 </html>
