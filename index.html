@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#2563eb">
-    <title>PM Tính Học Phí - ver 2.7</title>
+    <title>PM Tính Học Phí - ver 2.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -155,6 +155,7 @@
         }
         .day:active span { transform: scale(.92); }
         .day input:checked + span { background: #2563eb; color: #fff; box-shadow: 0 4px 10px -2px rgba(37,99,235,.45); }
+        .day.has-disc::after { content: ""; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: #ef4444; border: 2px solid #fff; z-index: 1; pointer-events: none; }
         .day.today span { outline: 2px solid #93c5fd; outline-offset: 1px; }
 
         /* ================= SUMMARY ================= */
@@ -198,6 +199,7 @@
         .paper { background: #fff; color: #111827; }
         .rc-title { text-align: center; }
         .rc-title h2 { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: .02em; margin: 0; }
+        .rc-logo { display: block; margin: 0 auto 8px; width: auto; max-width: 70%; object-fit: contain; }
         .rc-org { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 4px; }
         .rc-period { margin-top: 6px; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.5; overflow-wrap: anywhere; }
         .rc-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 12px; color: #475569; margin: 16px 0; }
@@ -316,7 +318,7 @@
             <header class="app-bar">
                 <div class="min-w-0">
                     <h1 id="appBarTitle" class="text-[17px] md:text-xl font-bold text-gray-900 leading-tight truncate">Học viên</h1>
-                    <p class="text-[11px] text-gray-400 leading-tight">PM Tính Học Phí · v2.7</p>
+                    <p class="text-[11px] text-gray-400 leading-tight">PM Tính Học Phí · v2.9</p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
                     <button id="whatsNewBtn" class="icon-btn bg-indigo-50 text-indigo-600" aria-label="Có gì mới" title="Có gì mới">✨</button>
@@ -359,6 +361,7 @@
                                     <select id="studentSelect" class="field"><option value="">-- Chọn học viên --</option></select>
                                 </div>
                                 <div id="attInfo" class="card p-4 text-sm text-gray-500">Chọn một học viên để bắt đầu điểm danh.</div>
+                                <div id="sessDiscCard" class="card p-4 text-sm" style="display:none"></div>
                             </div>
                             <div class="card p-4 cal-card">
                                 <div class="flex justify-between items-center mb-4">
@@ -401,7 +404,7 @@
                             </div>
                             <div class="space-y-3 lg:col-span-2">
                                 <button id="showReceiptBtn" class="btn btn-green w-full" style="padding:16px">📄 Xem / xuất phiếu học phí</button>
-                                <button id="openSettingsBtn2" class="btn btn-ghost w-full" style="padding:16px">💳 Ghi chú · Thanh toán · Mã QR</button>
+                                <button id="openSettingsBtn2" class="btn btn-ghost w-full" style="padding:16px">💳 Logo · Ghi chú · Thanh toán · QR</button>
                                 <button id="clearAllBtn" class="btn btn-red w-full" style="padding:16px">🗑️ Xóa tất cả dữ liệu</button>
                             </div>
                         </div>
@@ -460,8 +463,15 @@
                 <h2 class="text-lg font-bold text-gray-900">Chỉnh sửa giảm giá <span class="text-xs font-normal text-gray-400 block">(tháng đang xem)</span></h2>
                 <button id="closeEditDiscountBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
             </div>
-            <label class="label" for="editDiscountInput">Giảm giá (%)</label>
-            <input type="number" id="editDiscountInput" min="0" max="100" step="0.1" inputmode="decimal" class="field mb-4" placeholder="Nhập % giảm giá">
+            <label class="label">Hình thức giảm</label>
+            <div class="seg w-full mb-4" id="discTypeSeg">
+                <button type="button" data-t="pct" class="on" style="flex:1">% học phí</button>
+                <button type="button" data-t="month" style="flex:1">đ / tháng</button>
+            </div>
+            <label class="label" id="discInputLabel" for="editDiscountInput">Giảm giá (%)</label>
+            <input type="number" id="editDiscountInput" min="0" step="0.1" inputmode="decimal" class="field mb-3" placeholder="Nhập % giảm giá">
+            <div id="discPreview" class="rounded-2xl bg-gray-50 border border-gray-100 p-3 text-sm mb-2"></div>
+            <p class="text-xs text-gray-400 mb-4">💡 Muốn giảm riêng từng buổi? Vào tab <b>Điểm danh</b>, chọn học viên rồi nhập số tiền ở mục “Giảm giá theo buổi”.</p>
             <div class="flex gap-3">
                 <button id="cancelEditDiscountBtn" class="btn btn-ghost flex-1">Hủy</button>
                 <button id="saveEditDiscountBtn" class="btn btn-primary flex-1">Lưu</button>
@@ -541,6 +551,7 @@
 
             <div class="paper">
                 <div class="rc-title">
+                    <img id="receiptLogo" class="rc-logo" alt="Logo" style="display:none">
                     <div id="receiptOrg" class="rc-org" style="display:none"></div>
                     <h2>PHIẾU BÁO HỌC PHÍ</h2>
                     <div id="receiptMonthDisplay" class="rc-period"></div>
@@ -576,12 +587,33 @@
         <div class="modal-content md">
             <div class="sheet-handle"></div>
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-900">Ghi chú · Thanh toán · Mã QR</h2>
+                <h2 class="text-lg font-bold text-gray-900">Logo · Ghi chú · Thanh toán · QR</h2>
                 <button id="closeSettingsBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
             </div>
             <p class="text-xs text-gray-400 mb-4">Thông tin này được lưu và dùng chung cho các phiếu học phí. Bạn có thể bật/tắt từng phần khi xuất phiếu.</p>
 
             <div class="space-y-4">
+                <div class="p-4 rounded-2xl border border-gray-200">
+                    <div class="section-label mb-3">Logo Trung tâm / giáo viên <span class="normal-case font-normal">(hiện đầu phiếu)</span></div>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="qr-preview" id="logoPreview"><span>Chưa có logo</span></div>
+                        <div class="flex flex-col gap-2">
+                            <button id="btnPickLogo" class="btn btn-primary btn-sm">🖼️ Chọn logo</button>
+                            <button id="btnRecropLogo" class="btn btn-ghost btn-sm">✂️ Cắt lại ảnh</button>
+                            <button id="btnRemoveLogo" class="btn btn-red btn-sm">Xóa logo</button>
+                            <input id="logoFileInput" type="file" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 mt-3">
+                        <span class="text-xs font-semibold text-gray-500">Cỡ logo trên phiếu</span>
+                        <div class="seg" id="logoSizeSeg">
+                            <button type="button" data-s="s">Nhỏ</button>
+                            <button type="button" data-s="m" class="on">Vừa</button>
+                            <button type="button" data-s="l">Lớn</button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-3">Nên dùng ảnh PNG nền trong suốt. Có thể cắt bớt phần thừa của ảnh sau khi chọn.</p>
+                </div>
                 <div>
                     <label class="label">Tên trung tâm / giáo viên <span class="text-gray-400 font-normal">(hiện đầu phiếu, tùy chọn)</span></label>
                     <input id="setOrg" type="text" class="field" placeholder="Ví dụ: Lớp học thầy A">
@@ -632,7 +664,7 @@
         <div class="modal-content md">
             <div class="sheet-handle"></div>
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-lg font-bold text-gray-900">Cắt ảnh mã QR</h2>
+                <h2 id="cropTitle" class="text-lg font-bold text-gray-900">Cắt ảnh mã QR</h2>
                 <button id="closeCropBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
             </div>
             <div id="cropWrap" class="crop-wrap">
@@ -664,12 +696,14 @@
         <div class="modal-content">
             <div class="sheet-handle"></div>
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-indigo-700">Cập nhật phiên bản 2.7</h2>
+                <h2 class="text-lg font-bold text-indigo-700">Cập nhật phiên bản 2.9</h2>
                 <button id="closeWhatsNewBtn" class="icon-btn bg-gray-100 text-gray-500 text-2xl leading-none">&times;</button>
             </div>
             <div class="space-y-3 text-gray-700 text-sm">
                 <p><strong>Thay đổi chính:</strong></p>
                 <ul class="list-disc pl-5 space-y-1">
+                    <li><b>Mới:</b> chèn <b>logo</b> Trung tâm/giáo viên lên đầu phiếu học phí (Cài đặt → Logo, có cắt ảnh và chọn cỡ)</li>
+                    <li><b>Mới:</b> giảm học phí theo số tiền cho <b>từng buổi điểm danh</b> (nhập ở tab Điểm danh), hoặc cố định cả tháng (đ/tháng), ngoài giảm theo %</li>
                     <li>Giao diện tự thích ứng: điện thoại, tablet, laptop và PC</li>
                     <li>Phiếu học phí mới: bảng theo tháng, ngày học hiển thị đầy đủ, không tràn</li>
                     <li>Thêm ghi chú chung, thông tin thanh toán và mã QR (có cắt ảnh)</li>
@@ -709,6 +743,48 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmt = n => Math.round(n || 0).toLocaleString('vi-VN');
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    // ---- Giảm giá ----
+    // Dữ liệu cũ: số (= %). Dữ liệu mới: { t: 'pct' | 'day' | 'month', v: số }
+    //   pct   = giảm v % tổng học phí tháng
+    //   day   = giảm v đồng cho MỖI buổi học
+    //   month = giảm cố định v đồng cho cả tháng
+    function normDisc(d) {
+        if (d && typeof d === 'object') return { t: ['pct', 'day', 'month'].includes(d.t) ? d.t : 'pct', v: Math.max(0, Number(d.v) || 0) };
+        return { t: 'pct', v: Math.max(0, Number(d) || 0) };
+    }
+    function calcFee(s, key) {
+        const dates = s.sessions[key] || [], n = dates.length, gross = n * s.feeRate;
+        // 1) Giảm theo từng buổi điểm danh: s.sessionDisc[tháng][ngày] = số tiền (không vượt đơn giá 1 buổi)
+        const sd = (s.sessionDisc && s.sessionDisc[key]) || {};
+        let sessAmt = 0, sessCount = 0;
+        dates.forEach(dt => {
+            const v = Math.min(Math.max(0, Number(sd[dt]) || 0), s.feeRate);
+            if (v > 0) { sessAmt += v; sessCount++; }
+        });
+        // 2) Giảm theo tháng (% hoặc đ/tháng) tính trên phần còn lại sau khi trừ giảm từng buổi
+        const d = normDisc(s.discounts[key]), rest = gross - sessAmt;
+        let lvl = 0;
+        if (d.v > 0 && n > 0) {
+            if (d.t === 'pct') lvl = rest * Math.min(d.v, 100) / 100;
+            else if (d.t === 'day') lvl = d.v * n;      // dữ liệu v2.8 cũ (đ/buổi áp cho tất cả)
+            else lvl = d.v;
+        }
+        lvl = Math.min(Math.round(lvl), rest);
+        const amt = sessAmt + lvl;
+        return { n, gross, amt, sessAmt, sessCount, levelAmt: lvl, net: gross - amt, d, active: d.v > 0, has: sessCount > 0 || d.v > 0 };
+    }
+    function discText(cf) {
+        const parts = [];
+        if (cf.sessCount) parts.push(`${cf.sessCount} buổi`);
+        if (cf.active) parts.push(discLabel(cf.d));
+        return parts.join(' + ');
+    }
+    function discLabel(d) {
+        if (d.t === 'day') return `${fmt(d.v)}đ/buổi`;
+        if (d.t === 'month') return `${fmt(d.v)}đ/tháng`;
+        return `${d.v}%`;
+    }
     const WEEKDAYS = ['CN','T2','T3','T4','T5','T6','T7'];
 
     function openModal(el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
@@ -824,10 +900,13 @@
     let searchTerm = '';
     let receiptOpts = { note: true, pay: true, qr: true };
 
-    const DEFAULT_SETTINGS = { org: '', note: '', bank: '', acc: '', accName: '', transfer: '', qr: '' };
+    const DEFAULT_SETTINGS = { org: '', note: '', bank: '', acc: '', accName: '', transfer: '', qr: '', logo: '', logoSize: 'm' };
+    const LOGO_H = { s: 48, m: 72, l: 100 };   // chiều cao logo trên phiếu (px)
     let settings = { ...DEFAULT_SETTINGS };
     let draftQr = '';          // QR đang chỉnh trong modal cài đặt
     let qrSourceUrl = '';      // ảnh gốc (để cắt lại)
+    let draftLogo = '', draftLogoSize = 'm', logoSourceUrl = '';   // logo đang chỉnh trong modal cài đặt
+    let cropTarget = 'qr';     // đang cắt ảnh cho 'qr' hay 'logo'
 
     const getMonthKey = (m, y) => `${m + 1}-${y}`;
     const getCurrentMonthKey = () => getMonthKey(currentMonth, currentYear);
@@ -857,7 +936,7 @@
                 const raw = Array.isArray(data) ? data : Object.values(data);
                 students = raw.filter(Boolean).map(s => ({
                     ...s, class: s.class || '', feeRate: s.feeRate || 100000,
-                    discounts: s.discounts || {}, notes: s.notes || {}, sessions: s.sessions || {}
+                    discounts: s.discounts || {}, sessionDisc: s.sessionDisc || {}, notes: s.notes || {}, sessions: s.sessions || {}
                 }));
             }
             dataLoaded = true;
@@ -901,7 +980,7 @@
             showToast('✅ Cập nhật học viên thành công!');
         } else {
             students.push({ id: Date.now().toString(), name, class: $('studentClass').value.trim(),
-                feeRate: isNaN(feeRate) ? 100000 : feeRate, discounts: {}, notes: {}, sessions: {} });
+                feeRate: isNaN(feeRate) ? 100000 : feeRate, discounts: {}, sessionDisc: {}, notes: {}, sessions: {} });
             showToast('✅ Thêm học viên thành công!');
         }
         autoSave(); renderAll(); closeModal($('addStudentModal'));
@@ -953,8 +1032,8 @@
         }
 
         list.innerHTML = shown.map(({ s, i }) => {
-            const sess = s.sessions[key] || [], disc = s.discounts[key] || 0;
-            const fee = sess.length * s.feeRate * (1 - disc / 100);
+            const sess = s.sessions[key] || [], cf = calcFee(s, key), disc = cf.has;
+            const fee = cf.net;
             const note = s.notes?.[key];
             return `
             <div class="card p-3.5">
@@ -966,7 +1045,7 @@
                             <span class="font-bold text-emerald-600 text-sm flex-shrink-0">${fmt(fee)}đ</span>
                         </div>
                         <p class="text-xs text-gray-400 mt-0.5">${s.class ? `Lớp ${esc(s.class)} · ` : ''}${sess.length} buổi · ${fmt(s.feeRate)}đ/buổi</p>
-                        ${disc ? `<div class="inline-block mt-1.5 text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Giảm giá ${disc}%</div>` : ''}
+                        ${disc ? `<div class="inline-block mt-1.5 text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Giảm giá ${discText(cf)}${cf.amt ? ` (−${fmt(cf.amt)}đ)` : ''}</div>` : ''}
                         ${note ? `<div class="bg-yellow-50 border border-yellow-100 rounded-xl p-2 text-xs text-gray-700 mt-2 whitespace-pre-line">📝 ${esc(note)}</div>` : ''}
                         <div class="flex flex-wrap gap-1.5 mt-2.5">
                             <button class="btn btn-sm act-notes" style="background:#fefce8;color:#a16207;flex:1 1 auto" data-id="${s.id}">📝 Ghi chú</button>
@@ -992,16 +1071,48 @@
         s.notes[getCurrentMonthKey()] = $('editNotesTextarea').value.trim();
         autoSave(); renderAll(); closeModal($('editNotesModal')); showToast('✅ Đã lưu ghi chú');
     }
+    let discMode = 'pct';
+    const DISC_META = {
+        pct:   { label: 'Giảm giá (%)',                     ph: 'Nhập % giảm giá',      step: '0.1'  },
+        month: { label: 'Số tiền giảm cố định cả tháng (đồng)', ph: 'VD: 50000',        step: '1000' }
+    };
+    function readDiscInput() {
+        let v = Math.max(0, parseFloat($('editDiscountInput').value) || 0);
+        if (discMode === 'pct') v = Math.min(v, 100);
+        return v;
+    }
+    function setDiscMode(t) {
+        discMode = t;
+        document.querySelectorAll('#discTypeSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+        const m = DISC_META[t], inp = $('editDiscountInput');
+        $('discInputLabel').textContent = m.label;
+        inp.placeholder = m.ph; inp.step = m.step;
+        if (t === 'pct') inp.max = 100; else inp.removeAttribute('max');
+        updateDiscPreview();
+    }
+    function updateDiscPreview() {
+        const s = students.find(x => x.id === currentEditingStudentId); if (!s) return;
+        const key = getCurrentMonthKey();
+        const c = calcFee({ ...s, discounts: { [key]: { t: discMode, v: readDiscInput() } } }, key);
+        $('discPreview').innerHTML = `
+            <div class="flex justify-between py-0.5"><span class="text-gray-500">${c.n} buổi × ${fmt(s.feeRate)}đ</span><b>${fmt(c.gross)}đ</b></div>
+            ${c.sessAmt ? `<div class="flex justify-between py-0.5"><span class="text-gray-500">Giảm theo buổi (${c.sessCount} buổi)</span><b class="text-red-500">−${fmt(c.sessAmt)}đ</b></div>` : ''}
+            <div class="flex justify-between py-0.5"><span class="text-gray-500">Giảm theo tháng</span><b class="text-red-500">${c.levelAmt ? '−' + fmt(c.levelAmt) : '0'}đ</b></div>
+            <div class="flex justify-between py-1 mt-1 border-t border-gray-200"><span class="font-medium">Học phí còn lại</span><b class="text-emerald-600">${fmt(c.net)}đ</b></div>`;
+    }
     function editDiscount(id) {
         currentEditingStudentId = id;
         const s = students.find(x => x.id === id);
-        $('editDiscountInput').value = s.discounts[getCurrentMonthKey()] || 0;
+        const d = normDisc(s.discounts[getCurrentMonthKey()]);
+        const legacyDay = d.t === 'day';      // kiểu "đ/buổi cho tất cả" đã bỏ
+        $('editDiscountInput').value = legacyDay ? '' : (d.v || '');
+        setDiscMode(legacyDay ? 'pct' : d.t);
         openModal($('editDiscountModal'));
     }
     function saveEditDiscount() {
         const s = students.find(x => x.id === currentEditingStudentId); if (!s) return;
-        const v = parseFloat($('editDiscountInput').value) || 0;
-        s.discounts[getCurrentMonthKey()] = clamp(v, 0, 100);
+        const v = readDiscInput();
+        s.discounts[getCurrentMonthKey()] = v > 0 ? { t: discMode, v } : 0;
         autoSave(); renderAll(); closeModal($('editDiscountModal')); showToast('✅ Đã lưu giảm giá');
     }
 
@@ -1031,8 +1142,64 @@
         const key = getCurrentMonthKey();
         if (!s.sessions[key]) s.sessions[key] = [];
         if (attended) { if (!s.sessions[key].includes(date)) s.sessions[key].push(date); }
-        else s.sessions[key] = s.sessions[key].filter(d => d !== date);
-        autoSave(); renderStudents(); updateSummary(); updateAttendanceInfo();
+        else {
+            s.sessions[key] = s.sessions[key].filter(d => d !== date);
+            if (s.sessionDisc && s.sessionDisc[key]) {            // bỏ điểm danh thì bỏ luôn giảm giá của buổi đó
+                delete s.sessionDisc[key][date];
+                if (!Object.keys(s.sessionDisc[key]).length) delete s.sessionDisc[key];
+            }
+        }
+        autoSave(); renderStudents(); updateSummary(); updateAttendanceInfo(); renderSessDiscList();
+    }
+
+    // ---- Giảm giá theo từng buổi điểm danh ----
+    function renderSessDiscList() {
+        const el = $('sessDiscCard'), s = students.find(x => x.id === $('studentSelect').value);
+        const key = getCurrentMonthKey(), dates = s ? (s.sessions[key] || []).slice().sort() : [];
+        if (!s || !dates.length) { el.style.display = 'none'; el.innerHTML = ''; markDiscDays(); return; }
+        const sd = (s.sessionDisc && s.sessionDisc[key]) || {};
+        el.style.display = 'block';
+        el.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+                <div class="font-semibold text-gray-900">💸 Giảm giá theo buổi</div>
+                <button type="button" id="clearSessDiscBtn" class="btn btn-sm btn-red">Xóa hết</button>
+            </div>
+            <p class="text-xs text-gray-400 mb-2">Nhập số tiền giảm (đồng) cho buổi nào cần giảm. Để trống nếu không giảm.</p>` +
+            dates.map(dt => {
+                const [y, m, d] = dt.split('-').map(Number);
+                return `<div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
+                    <div class="flex-shrink-0 text-sm" style="width:88px"><b>${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}</b> <span class="text-xs text-gray-400">${WEEKDAYS[new Date(y, m - 1, d).getDay()]}</span></div>
+                    <input type="number" inputmode="numeric" min="0" max="${s.feeRate}" step="1000" class="field sess-disc-input" style="padding:8px 10px;font-size:14px" data-date="${dt}" value="${sd[dt] || ''}" placeholder="0">
+                    <span class="text-xs text-gray-400">đ</span></div>`;
+            }).join('');
+        markDiscDays();
+    }
+    function markDiscDays() {
+        const s = students.find(x => x.id === $('studentSelect').value), key = getCurrentMonthKey();
+        const sd = (s && s.sessionDisc && s.sessionDisc[key]) || {}, att = new Set(s?.sessions[key] || []);
+        document.querySelectorAll('#calendarGrid input[data-date]').forEach(cb => {
+            cb.closest('label').classList.toggle('has-disc', att.has(cb.dataset.date) && (Number(sd[cb.dataset.date]) || 0) > 0);
+        });
+    }
+    function setSessDisc(date, raw, input) {
+        const s = students.find(x => x.id === $('studentSelect').value); if (!s) return;
+        const key = getCurrentMonthKey();
+        let v = Math.max(0, Math.round(parseFloat(raw) || 0));
+        if (v > s.feeRate) { v = s.feeRate; showToast('Giảm tối đa bằng đơn giá 1 buổi', 'error'); }
+        input.value = v || '';
+        if (!s.sessionDisc) s.sessionDisc = {};
+        if (!s.sessionDisc[key]) s.sessionDisc[key] = {};
+        if (v > 0) s.sessionDisc[key][date] = v; else delete s.sessionDisc[key][date];
+        if (!Object.keys(s.sessionDisc[key]).length) delete s.sessionDisc[key];
+        autoSave(); renderStudents(); updateSummary(); updateAttendanceInfo(); markDiscDays();
+    }
+    function clearSessDisc() {
+        const s = students.find(x => x.id === $('studentSelect').value); if (!s) return;
+        const key = getCurrentMonthKey();
+        if (!s.sessionDisc || !s.sessionDisc[key]) return;
+        delete s.sessionDisc[key];
+        autoSave(); renderStudents(); updateSummary(); updateAttendanceInfo(); renderSessDiscList();
+        showToast('Đã xóa giảm giá các buổi');
     }
 
     function updateAttendanceCheckboxes() {
@@ -1040,20 +1207,20 @@
         const s = students.find(x => x.id === id);
         const set = new Set(s?.sessions[key] || []);
         document.querySelectorAll('#calendarGrid input[data-date]').forEach(cb => { cb.checked = set.has(cb.dataset.date); });
-        updateAttendanceInfo();
+        updateAttendanceInfo(); renderSessDiscList();
     }
 
     function updateAttendanceInfo() {
         const el = $('attInfo'), s = students.find(x => x.id === $('studentSelect').value);
         if (!s) { el.innerHTML = 'Chọn một học viên để bắt đầu điểm danh.'; return; }
-        const key = getCurrentMonthKey(), n = (s.sessions[key] || []).length, disc = s.discounts[key] || 0;
+        const key = getCurrentMonthKey(), cf = calcFee(s, key), n = cf.n;
         el.innerHTML = `
             <div class="font-semibold text-gray-900 text-base">${esc(s.name)}</div>
             <div class="text-xs text-gray-400 mb-3">${s.class ? 'Lớp ' + esc(s.class) + ' · ' : ''}${monthLabel(key)}</div>
             <div class="flex justify-between py-1"><span>Số buổi</span><b class="text-gray-900">${n}</b></div>
             <div class="flex justify-between py-1"><span>Đơn giá</span><b class="text-gray-900">${fmt(s.feeRate)}đ</b></div>
-            ${disc ? `<div class="flex justify-between py-1"><span>Giảm giá</span><b class="text-red-500">${disc}%</b></div>` : ''}
-            <div class="flex justify-between py-2 mt-1 border-t border-gray-100"><span>Học phí tháng</span><b class="text-emerald-600">${fmt(n * s.feeRate * (1 - disc / 100))}đ</b></div>`;
+            ${cf.has ? `<div class="flex justify-between py-1"><span>Giảm giá</span><b class="text-red-500">${discText(cf)}${cf.amt ? ` (−${fmt(cf.amt)}đ)` : ''}</b></div>` : ''}
+            <div class="flex justify-between py-2 mt-1 border-t border-gray-100"><span>Học phí tháng</span><b class="text-emerald-600">${fmt(cf.net)}đ</b></div>`;
     }
 
     function updateMonthYearDisplay() {
@@ -1077,11 +1244,10 @@
         const key = getCurrentMonthKey();
         let total = 0, totalSess = 0, rows = '';
         students.forEach(s => {
-            const n = (s.sessions[key] || []).length, disc = s.discounts[key] || 0;
-            const fee = n * s.feeRate * (1 - disc / 100);
+            const cf = calcFee(s, key), n = cf.n, fee = cf.net;
             total += fee; totalSess += n;
             rows += `<div class="sum-row">
-                <div class="min-w-0"><div class="font-medium truncate">${esc(s.name)}</div><div class="text-xs text-gray-400">${s.class ? 'Lớp ' + esc(s.class) : ''}${disc ? ` · giảm ${disc}%` : ''}</div></div>
+                <div class="min-w-0"><div class="font-medium truncate">${esc(s.name)}</div><div class="text-xs text-gray-400">${s.class ? 'Lớp ' + esc(s.class) : ''}${cf.has ? ` · giảm ${discText(cf)}` : ''}</div></div>
                 <div class="text-gray-500 whitespace-nowrap">${n} buổi</div>
                 <div class="font-semibold text-emerald-600 whitespace-nowrap text-right">${fmt(fee)}đ</div></div>`;
         });
@@ -1138,8 +1304,8 @@
         list.innerHTML = students.map(s => {
             let n = 0, fee = 0, hasNotes = false;
             selectedMonths.forEach(k => {
-                const c = (s.sessions[k] || []).length, d = s.discounts[k] || 0;
-                n += c; fee += c * s.feeRate * (1 - d / 100);
+                const cf = calcFee(s, k), c = cf.n;
+                n += c; fee += cf.net;
                 if ((s.notes[k] || '').trim()) hasNotes = true;
             });
             return `<div class="flex items-center justify-between gap-2 p-3 border-b border-gray-100 last:border-0">
@@ -1205,6 +1371,9 @@
         $('receiptMonthDisplay').textContent = months.map(monthLabel).join(' + ');
         const orgEl = $('receiptOrg');
         orgEl.textContent = settings.org || ''; orgEl.style.display = settings.org ? 'block' : 'none';
+        const logoEl = $('receiptLogo');
+        if (settings.logo) { logoEl.src = settings.logo; logoEl.style.height = (LOGO_H[settings.logoSize] || LOGO_H.m) + 'px'; logoEl.style.display = 'block'; }
+        else { logoEl.removeAttribute('src'); logoEl.style.display = 'none'; }
 
         const mm = String(today.getMonth() + 1).padStart(2, '0'), yy = String(today.getFullYear()).slice(-2);
         const state = JSON.stringify({ s: selected.map(s => s.id), m: months });
@@ -1217,18 +1386,19 @@
             let rows = '', dateBlocks = '', notesHtml = '', tS = 0, tF = 0;
             months.forEach(mk => {
                 const ss = (st.sessions[mk] || []).slice().sort();
-                const disc = st.discounts[mk] || 0;
+                const cf = calcFee(st, mk);
                 if (ss.length) {
-                    const gross = ss.length * st.feeRate, net = Math.round(gross * (1 - disc / 100));
+                    const gross = cf.gross, net = cf.net, sdm = (st.sessionDisc && st.sessionDisc[mk]) || {};
                     tS += ss.length; tF += net;
                     rows += `<tr>
-                        <td>${monthLabel(mk)}${disc ? `<div class="disc">Giảm ${disc}% (−${fmt(gross - net)} đ)</div>` : ''}</td>
+                        <td>${monthLabel(mk)}${cf.sessAmt ? `<div class="disc">Giảm ${cf.sessCount} buổi (−${fmt(cf.sessAmt)} đ)</div>` : ''}${cf.levelAmt ? `<div class="disc">Giảm ${discLabel(cf.d)} (−${fmt(cf.levelAmt)} đ)</div>` : ''}</td>
                         <td class="r">${ss.length}</td><td class="r">${fmt(st.feeRate)} đ</td><td class="r">${fmt(net)} đ</td></tr>`;
                     const [y] = mk.split('-').slice(1);
                     dateBlocks += `<div class="date-block"><div class="date-block-title">Ngày học ${monthLabel(mk).toLowerCase()} (${ss.length} buổi)</div><div class="chips">` +
                         ss.map(d => {
                             const [yy2, m2, d2] = d.split('-').map(Number);
-                            return `<div class="chip"><small>${WEEKDAYS[new Date(yy2, m2 - 1, d2).getDay()]}</small><b>${String(d2).padStart(2, '0')}/${String(m2).padStart(2, '0')}</b></div>`;
+                            const dv = Math.min(Number(sdm[d]) || 0, st.feeRate);
+                            return `<div class="chip"${dv ? ' style="border-color:#fca5a5;background:#fef2f2"' : ''}><small>${WEEKDAYS[new Date(yy2, m2 - 1, d2).getDay()]}</small><b>${String(d2).padStart(2, '0')}/${String(m2).padStart(2, '0')}</b>${dv ? `<small style="color:#dc2626">−${fmt(dv)}</small>` : ''}</div>`;
                         }).join('') + `</div></div>`;
                 }
                 const note = (st.notes[mk] || '').trim();
@@ -1336,12 +1506,21 @@
         $('btnRemoveQr').disabled = !draftQr;
     }
 
+    function renderLogoPreview() {
+        const box = $('logoPreview');
+        box.innerHTML = draftLogo ? `<img src="${draftLogo}" alt="Logo">` : '<span>Chưa có logo</span>';
+        $('btnRecropLogo').disabled = !(logoSourceUrl || draftLogo);
+        $('btnRemoveLogo').disabled = !draftLogo;
+        document.querySelectorAll('#logoSizeSeg button').forEach(b => b.classList.toggle('on', b.dataset.s === draftLogoSize));
+    }
+
     function openSettingsModal() {
         $('setOrg').value = settings.org; $('setNote').value = settings.note;
         $('setBank').value = settings.bank; $('setAcc').value = settings.acc;
         $('setAccName').value = settings.accName; $('setTransfer').value = settings.transfer;
         draftQr = settings.qr; qrSourceUrl = '';
-        renderQrPreview();
+        draftLogo = settings.logo || ''; draftLogoSize = settings.logoSize || 'm'; logoSourceUrl = '';
+        renderQrPreview(); renderLogoPreview();
         openModal($('settingsModal'));
     }
 
@@ -1350,12 +1529,12 @@
             org: $('setOrg').value.trim(), note: $('setNote').value.trim(),
             bank: $('setBank').value.trim(), acc: $('setAcc').value.trim(),
             accName: $('setAccName').value.trim(), transfer: $('setTransfer').value.trim(),
-            qr: draftQr
+            qr: draftQr, logo: draftLogo, logoSize: draftLogoSize
         };
         const ok = await persistSettings();
         closeModal($('settingsModal'));
         if ($('selectStudentsModal').classList.contains('open')) refreshExtraOptions();
-        showToast(ok ? '✅ Đã lưu thông tin thanh toán' : '⚠️ Đã lưu trên máy này (chưa đồng bộ được lên Firebase)', ok ? 'success' : 'error');
+        showToast(ok ? '✅ Đã lưu cài đặt' : '⚠️ Đã lưu trên máy này (chưa đồng bộ được lên Firebase)', ok ? 'success' : 'error');
     }
 
     // =====================================================================
@@ -1390,13 +1569,16 @@
         crop.W = cropImg.clientWidth; crop.H = cropImg.clientHeight;
         let w, h;
         if (crop.ratio === 1) { w = h = Math.min(crop.W, crop.H) * 0.8; }
+        else if (cropTarget === 'logo') { w = crop.W; h = crop.H; }
         else { w = crop.W * 0.8; h = crop.H * 0.8; }
         crop.w = w; crop.h = h; crop.x = (crop.W - w) / 2; crop.y = (crop.H - h) / 2;
         setRatioUI(); drawCrop();
     }
 
-    function openCrop(src) {
-        crop.ratio = 1;
+    function openCrop(src, target = 'qr') {
+        cropTarget = target;
+        $('cropTitle').textContent = target === 'logo' ? 'Cắt logo' : 'Cắt ảnh mã QR';
+        crop.ratio = target === 'logo' ? 0 : 1;
         openModal($('cropModal'));
         cropImg.onload = () => requestAnimationFrame(initCrop);
         cropImg.removeAttribute('src');
@@ -1466,17 +1648,24 @@
     function applyCrop() {
         const kx = cropImg.naturalWidth / crop.W, ky = cropImg.naturalHeight / crop.H;
         const sx = crop.x * kx, sy = crop.y * ky, sw = crop.w * kx, sh = crop.h * ky;
-        let ow = sw, oh = sh; const MAX = 600;
+        const isLogo = cropTarget === 'logo';
+        let ow = sw, oh = sh; const MAX = isLogo ? 400 : 600;
         if (Math.max(ow, oh) > MAX) { const k = MAX / Math.max(ow, oh); ow *= k; oh *= k; }
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(ow)); canvas.height = Math.max(1, Math.round(oh));
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (!isLogo) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }   // logo giữ nền trong suốt
         ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
         let url = canvas.toDataURL('image/png');
-        if (url.length > 300000) url = canvas.toDataURL('image/jpeg', 0.9);
-        draftQr = url;
-        renderQrPreview();
+        if (url.length > 300000) {
+            if (isLogo) {   // ảnh quá nặng: chuyển JPEG nền trắng
+                const c2 = document.createElement('canvas'); c2.width = canvas.width; c2.height = canvas.height;
+                const x2 = c2.getContext('2d'); x2.fillStyle = '#fff'; x2.fillRect(0, 0, c2.width, c2.height); x2.drawImage(canvas, 0, 0);
+                url = c2.toDataURL('image/jpeg', 0.9);
+            } else url = canvas.toDataURL('image/jpeg', 0.9);
+        }
+        if (isLogo) { draftLogo = url; renderLogoPreview(); }
+        else { draftQr = url; renderQrPreview(); }
         closeModal($('cropModal'));
     }
 
@@ -1484,7 +1673,16 @@
         if (!file) return;
         if (!file.type.startsWith('image/')) return showToast('Vui lòng chọn file ảnh!', 'error');
         const reader = new FileReader();
-        reader.onload = () => { qrSourceUrl = reader.result; openCrop(qrSourceUrl); };
+        reader.onload = () => { qrSourceUrl = reader.result; openCrop(qrSourceUrl, 'qr'); };
+        reader.onerror = () => showToast('Không đọc được ảnh', 'error');
+        reader.readAsDataURL(file);
+    }
+
+    function handleLogoFile(file) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) return showToast('Vui lòng chọn file ảnh!', 'error');
+        const reader = new FileReader();
+        reader.onload = () => { logoSourceUrl = reader.result; openCrop(logoSourceUrl, 'logo'); };
         reader.onerror = () => showToast('Không đọc được ảnh', 'error');
         reader.readAsDataURL(file);
     }
@@ -1549,6 +1747,10 @@
         $('closeEditDiscountBtn').addEventListener('click', () => closeModal($('editDiscountModal')));
         $('cancelEditDiscountBtn').addEventListener('click', () => closeModal($('editDiscountModal')));
         $('saveEditDiscountBtn').addEventListener('click', saveEditDiscount);
+        $('discTypeSeg').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (b) setDiscMode(b.dataset.t); });
+        $('editDiscountInput').addEventListener('input', updateDiscPreview);
+        $('sessDiscCard').addEventListener('change', e => { if (e.target.classList.contains('sess-disc-input')) setSessDisc(e.target.dataset.date, e.target.value, e.target); });
+        $('sessDiscCard').addEventListener('click', e => { if (e.target.closest('#clearSessDiscBtn')) clearSessDisc(); });
 
         // Cài đặt thanh toán / QR
         $('closeSettingsBtn').addEventListener('click', () => closeModal($('settingsModal')));
@@ -1558,6 +1760,11 @@
         $('qrFileInput').addEventListener('change', e => handleQrFile(e.target.files[0]));
         $('btnRecropQr').addEventListener('click', () => { const src = qrSourceUrl || draftQr; if (src) openCrop(src); });
         $('btnRemoveQr').addEventListener('click', () => { draftQr = ''; qrSourceUrl = ''; renderQrPreview(); });
+        $('btnPickLogo').addEventListener('click', () => { $('logoFileInput').value = ''; $('logoFileInput').click(); });
+        $('logoFileInput').addEventListener('change', e => handleLogoFile(e.target.files[0]));
+        $('btnRecropLogo').addEventListener('click', () => { const src = logoSourceUrl || draftLogo; if (src) openCrop(src, 'logo'); });
+        $('btnRemoveLogo').addEventListener('click', () => { draftLogo = ''; logoSourceUrl = ''; renderLogoPreview(); });
+        $('logoSizeSeg').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) { draftLogoSize = b.dataset.s; renderLogoPreview(); } });
         $('closeCropBtn').addEventListener('click', () => closeModal($('cropModal')));
         $('cancelCropBtn').addEventListener('click', () => closeModal($('cropModal')));
         $('applyCropBtn').addEventListener('click', applyCrop);
